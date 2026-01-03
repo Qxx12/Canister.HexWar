@@ -1,0 +1,22 @@
+@use '../../styles/tokens' as *;
+
+.hexGroup {
+  &:hover .hexPoly {
+    filter: brightness(0.92);
+  }
+}
+
+.hexPoly {
+  transition: filter 0.1s ease;
+}
+
+.unitCount {
+  fill: #fff;
+  font-family: $font-family;
+  font-weight: $font-weight-normal;
+  pointer-events: none;
+}
+
+.crown {
+  pointer-events: none;
+}

@@ -1,0 +1,26 @@
+@use '../../styles/tokens' as *;
+@use '../../styles/mixins' as *;
+
+.button {
+  @include button-base;
+}
+
+.primary {
+  background: $color-surface;
+  color: $color-text;
+}
+
+.secondary {
+  background: $color-bg;
+  color: $color-text-muted;
+}
+
+.danger {
+  background: $color-surface;
+  color: $color-warning;
+  border-color: $color-border;
+
+  &:hover {
+    border-color: $color-warning;
+  }
+}

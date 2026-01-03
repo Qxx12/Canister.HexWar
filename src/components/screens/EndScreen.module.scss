@@ -1,0 +1,85 @@
+@use '../../styles/tokens' as *;
+@use '../../styles/mixins' as *;
+
+.screen {
+  width: 100%;
+  height: 100%;
+  @include flex-center;
+  background: $color-bg;
+  overflow-y: auto;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-lg;
+  max-width: 600px;
+  width: 90%;
+  padding: $space-xl $space-md;
+}
+
+.title {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-normal;
+  letter-spacing: 0.02em;
+}
+
+.win    { color: $color-text; }
+.lose   { color: $color-text-muted; }
+.retire { color: $color-text-muted; }
+
+.subtitle {
+  color: $color-text-muted;
+  font-size: $font-size-sm;
+  margin-top: -$space-sm;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  th {
+    padding: $space-xs $space-sm;
+    text-align: right;
+    color: $color-text-muted;
+    border-bottom: 1px solid $color-border;
+    font-weight: $font-weight-normal;
+    letter-spacing: 0.04em;
+
+    &:first-child { text-align: left; }
+  }
+
+  td {
+    padding: $space-xs $space-sm;
+    text-align: right;
+    color: $color-text;
+    border-bottom: 1px solid $color-border;
+
+    &:first-child { text-align: left; }
+  }
+}
+
+.winner td {
+  color: $color-text;
+  font-weight: $font-weight-bold;
+}
+
+.playerCell {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.crown {
+  margin-left: $space-xs;
+  color: $color-text-muted;
+}

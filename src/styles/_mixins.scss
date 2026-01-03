@@ -1,0 +1,50 @@
+@use 'tokens' as *;
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin button-base {
+  cursor: pointer;
+  border: 1px solid $color-border;
+  border-radius: 0;
+  font-family: $font-family;
+  font-size: $font-size-base;
+  font-weight: $font-weight-normal;
+  padding: $space-xs $space-sm;
+  transition: border-color 0.15s, color 0.15s;
+  letter-spacing: 0.02em;
+
+  &:hover {
+    border-color: $color-border-dark;
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+@mixin surface {
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 0;
+}
+
+@mixin mobile {
+  @media (max-width: #{$bp-mobile}) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (max-width: #{$bp-tablet}) {
+    @content;
+  }
+}

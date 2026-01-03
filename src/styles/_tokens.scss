@@ -1,0 +1,65 @@
+// Player colors — saturated enough to read on light background
+$color-player-0: #2b6cb0;
+$color-player-1: #c0392b;
+$color-player-2: #27ae60;
+$color-player-3: #d35400;
+$color-player-4: #6c3483;
+$color-player-5: #9a7d0a;
+
+$player-colors: (
+  0: $color-player-0,
+  1: $color-player-1,
+  2: $color-player-2,
+  3: $color-player-3,
+  4: $color-player-4,
+  5: $color-player-5,
+);
+
+// UI colors — light theme matching nonaction.net
+$color-bg:             #f0f0f0;
+$color-surface:        #c8c8c8;
+$color-surface-raised: #d8d8d8;
+$color-border:         #b0b0b0;
+$color-border-dark:    #999;
+$color-text:           #111;
+$color-text-muted:     #666;
+$color-text-faint:     #aaa;
+$color-accent:         #2b6cb0;
+$color-warning:        #c0392b;
+$color-tile-unconquered: #d8d8d8;
+
+// Typography — monospace throughout, matching nonaction.net
+$font-family:        "Lucida Console", Monaco, monospace;
+$font-size-xs:       9px;
+$font-size-sm:       11px;
+$font-size-base:     12px;
+$font-size-md:       13px;
+$font-size-lg:       16px;
+$font-size-xl:       20px;
+$font-weight-normal: 400;
+$font-weight-bold:   700;
+
+// Spacing
+$space-xs:  4px;
+$space-sm:  8px;
+$space-md:  16px;
+$space-lg:  24px;
+$space-xl:  40px;
+$space-xxl: 64px;
+
+// Hex geometry
+$hex-size: 36px;
+
+// Animation
+$anim-move-duration:  220ms;
+$anim-fight-duration: 380ms;
+$anim-easing:         cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+// Breakpoints
+$bp-mobile: 480px;
+$bp-tablet: 768px;
+
+// Z-indices
+$z-hud:     10;
+$z-modal:   100;
+$z-overlay: 200;

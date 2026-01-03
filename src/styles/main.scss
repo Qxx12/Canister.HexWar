@@ -1,0 +1,18 @@
+@use 'reset';
+@use 'tokens' as *;
+
+body {
+  font-family: $font-family;
+  background: $color-bg;
+  color: $color-text;
+  font-size: $font-size-base;
+}
+
+:root {
+  --color-player-0: #{$color-player-0};
+  --color-player-1: #{$color-player-1};
+  --color-player-2: #{$color-player-2};
+  --color-player-3: #{$color-player-3};
+  --color-player-4: #{$color-player-4};
+  --color-player-5: #{$color-player-5};
+}

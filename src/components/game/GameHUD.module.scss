@@ -1,0 +1,127 @@
+@use '../../styles/tokens' as *;
+@use '../../styles/mixins' as *;
+
+.hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: $z-hud;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-xs $space-md;
+  background: $color-surface;
+  border-bottom: 1px solid $color-border;
+}
+
+.turnInfo {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.turnNumber {
+  font-size: $font-size-sm;
+  color: $color-text-muted;
+}
+
+.status {
+  font-size: $font-size-sm;
+  color: $color-text-muted;
+}
+
+.playerTurn {
+  color: $color-text;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.zoomControls {
+  display: flex;
+  gap: $space-xs;
+}
+
+.zoomBtn {
+  width: 22px;
+  height: 22px;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 0;
+  color: $color-text-muted;
+  font-size: $font-size-md;
+  font-family: $font-family;
+  line-height: 1;
+  @include flex-center;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: $color-border-dark;
+    color: $color-text;
+  }
+}
+
+.legend {
+  display: flex;
+  gap: $space-md;
+  padding: $space-xs $space-md;
+  background: rgba($color-surface, 0.85);
+  border-bottom: 1px solid $color-border;
+  flex-wrap: wrap;
+}
+
+.playerEntry {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.colorDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.playerName {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  letter-spacing: 0.05em;
+}
+
+.you {
+  color: $color-text;
+}
+
+.nextTurnWrapper {
+  position: fixed;
+  bottom: $space-lg;
+  right: $space-lg;
+  pointer-events: auto;
+}
+
+.menuContent {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  color: $color-text;
+  font-size: $font-size-sm;
+}
+
+.menuActions {
+  display: flex;
+  gap: $space-sm;
+}

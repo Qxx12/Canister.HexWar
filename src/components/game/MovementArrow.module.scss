@@ -1,0 +1,10 @@
+@use '../../styles/tokens' as *;
+
+.arrow {
+  pointer-events: none;
+}
+
+.label {
+  font-family: $font-family;
+  font-weight: $font-weight-bold;
+}

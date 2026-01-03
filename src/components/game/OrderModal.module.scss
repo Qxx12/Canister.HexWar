@@ -1,0 +1,46 @@
+@use '../../styles/tokens' as *;
+@use '../../styles/mixins' as *;
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.info {
+  color: $color-text-muted;
+  font-size: $font-size-sm;
+}
+
+.inputRow {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.label {
+  font-size: $font-size-sm;
+  color: $color-text-muted;
+}
+
+.input {
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 0;
+  color: $color-text;
+  font-size: $font-size-base;
+  font-family: $font-family;
+  padding: $space-xs $space-sm;
+  width: 100%;
+
+  &:focus {
+    border-color: $color-border-dark;
+    outline: none;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: $space-sm;
+  flex-wrap: wrap;
+}

@@ -1,0 +1,26 @@
+@use '../../styles/tokens' as *;
+@use '../../styles/mixins' as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(240, 240, 240, 0.7);
+  @include flex-center;
+  z-index: $z-modal;
+}
+
+.dialog {
+  @include surface;
+  padding: $space-lg;
+  min-width: 280px;
+  max-width: 400px;
+  width: 90%;
+}
+
+.title {
+  font-size: $font-size-md;
+  font-weight: $font-weight-normal;
+  margin-bottom: $space-md;
+  color: $color-text;
+  letter-spacing: 0.02em;
+}
