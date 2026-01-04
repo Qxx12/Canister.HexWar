@@ -3,7 +3,7 @@ import type { AxialCoord } from '../types/hex'
 import { hexToKey, hexNeighbors, hexDistance } from '../types/hex'
 import type { PlayerId } from '../types/player'
 
-const BOARD_SIZE = 16
+const BOARD_SIZE = 12
 const TARGET_TILES = Math.floor(BOARD_SIZE * BOARD_SIZE * 0.65) // ~166 tiles
 
 function generateBlob(rng: () => number): Set<string> {

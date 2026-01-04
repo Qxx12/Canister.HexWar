@@ -1,15 +1,13 @@
-import type { GameState, GamePhase } from '../types/game'
+import type { GameState } from '../types/game'
 import type { Player, PlayerId } from '../types/player'
 import type { Board } from '../types/board'
-import type { MovementOrder, OrderMap, AllOrders } from '../types/orders'
-import type { AnimationEvent } from '../types/animation'
+import type { MovementOrder, AllOrders } from '../types/orders'
 import type { PlayerStats, EndGameStats } from '../types/stats'
+import type { TurnStep } from './turnResolver'
 import { generateBoard } from './boardGenerator'
 import { generateUnits } from './unitGenerator'
 import { resolvePlayerTurn } from './turnResolver'
-import { checkWin, checkEliminations } from './winCondition'
 import { PLAYER_COLORS, PLAYER_NAMES } from '../types/player'
-import { hexToKey, hexNeighbors } from '../types/hex'
 import { computeAiOrders } from '../ai/aiController'
 
 const HUMAN_PLAYER_ID: PlayerId = 'p0'
@@ -70,7 +68,7 @@ export function cancelHumanOrder(state: GameState, fromKey: string): GameState {
 
 export function executeHumanMoves(state: GameState): {
   newState: GameState
-  animationEvents: AnimationEvent[]
+  steps: TurnStep[]
 } {
   const humanOrders = state.orders.get(state.humanPlayerId) ?? new Map()
   const result = resolvePlayerTurn(
@@ -82,12 +80,12 @@ export function executeHumanMoves(state: GameState): {
   )
 
   if (result.winnerId) {
-    return buildEndState(state, result.board, result.players, result.runningStats, result.winnerId, result.animationEvents)
+    return buildEndState(state, result.board, result.players, result.runningStats, result.winnerId, result.steps)
   }
 
   const humanPlayer = result.players.find(p => p.id === state.humanPlayerId)
   if (!humanPlayer || humanPlayer.isEliminated) {
-    return buildEndState(state, result.board, result.players, result.runningStats, null, result.animationEvents)
+    return buildEndState(state, result.board, result.players, result.runningStats, null, result.steps)
   }
 
   return {
@@ -96,9 +94,9 @@ export function executeHumanMoves(state: GameState): {
       board: result.board,
       players: result.players,
       runningStats: result.runningStats,
-      phase: 'playerTurn', // stay in player turn after executing moves
+      phase: 'playerTurn',
     },
-    animationEvents: result.animationEvents,
+    steps: result.steps,
   }
 }
 
@@ -112,7 +110,7 @@ export function endHumanTurn(state: GameState): GameState {
 
 export function resolveAiTurn(state: GameState, aiIndex: number): {
   newState: GameState
-  animationEvents: AnimationEvent[]
+  steps: TurnStep[]
 } {
   const aiPlayers = state.players.filter(p => p.type === 'ai' && !p.isEliminated)
   if (aiIndex >= aiPlayers.length) {
@@ -126,7 +124,7 @@ export function resolveAiTurn(state: GameState, aiIndex: number): {
       phase: 'playerTurn',
       turn: { turnNumber: state.turn.turnNumber + 1, activeAiIndex: 0 },
     }
-    return { newState: nextState, animationEvents: [] }
+    return { newState: nextState, steps: [] }
   }
 
   const aiPlayer = aiPlayers[aiIndex]
@@ -145,12 +143,12 @@ export function resolveAiTurn(state: GameState, aiIndex: number): {
   )
 
   if (result.winnerId) {
-    return buildEndState(state, result.board, result.players, result.runningStats, result.winnerId, result.animationEvents)
+    return buildEndState(state, result.board, result.players, result.runningStats, result.winnerId, result.steps)
   }
 
   const humanPlayer = result.players.find(p => p.id === state.humanPlayerId)
   if (!humanPlayer || humanPlayer.isEliminated) {
-    return buildEndState(state, result.board, result.players, result.runningStats, null, result.animationEvents)
+    return buildEndState(state, result.board, result.players, result.runningStats, null, result.steps)
   }
 
   return {
@@ -163,7 +161,7 @@ export function resolveAiTurn(state: GameState, aiIndex: number): {
       phase: 'aiTurn',
       turn: { ...state.turn, activeAiIndex: aiIndex + 1 },
     },
-    animationEvents: result.animationEvents,
+    steps: result.steps,
   }
 }
 
@@ -173,13 +171,9 @@ function buildEndState(
   players: Player[],
   runningStats: Map<PlayerId, PlayerStats>,
   winnerId: PlayerId | null,
-  animationEvents: AnimationEvent[],
-): { newState: GameState; animationEvents: AnimationEvent[] } {
-  const outcome = winnerId === state.humanPlayerId
-    ? 'win'
-    : (winnerId === null || players.find(p => p.id === state.humanPlayerId)?.isEliminated)
-      ? 'lose'
-      : 'lose'
+  steps: TurnStep[],
+): { newState: GameState; steps: TurnStep[] } {
+  const outcome = winnerId === state.humanPlayerId ? 'win' : 'lose'
 
   const finalStats: EndGameStats = {
     outcome,
@@ -201,7 +195,7 @@ function buildEndState(
       winner: winnerId,
       stats: finalStats,
     },
-    animationEvents,
+    steps,
   }
 }
 

@@ -2,12 +2,14 @@ import { useEffect, useCallback, useState } from 'react'
 import { useGameState } from './hooks/useGameState'
 import { useViewport } from './hooks/useViewport'
 import { useAnimationQueue } from './hooks/useAnimationQueue'
+import type { AnimationStep } from './hooks/useAnimationQueue'
 import { GameBoard } from './components/game/GameBoard'
 import { GameHUD } from './components/game/GameHUD'
 import { StartScreen } from './components/screens/StartScreen'
 import { EndScreen } from './components/screens/EndScreen'
 import type { MovementOrder } from './types/orders'
-import type { AnimationEvent } from './types/animation'
+import type { Board } from './types/board'
+import type { TurnStep } from './engine/turnResolver'
 import './styles/main.scss'
 
 type AppScreen = 'start' | 'game' | 'end'
@@ -19,6 +21,10 @@ export default function App() {
   const { activeEvent, enqueue, clearQueue } = useAnimationQueue()
   const [isAnimating, setIsAnimating] = useState(false)
 
+  // Display board lags behind state.board — updated one step at a time as animations play.
+  // state.board (logic board) is always fully resolved and used by the engine.
+  const [displayBoard, setDisplayBoard] = useState<Board | null>(null)
+
   const handleStartGame = useCallback(() => {
     startGame()
     setScreen('game')
@@ -27,6 +33,7 @@ export default function App() {
   const handleRestart = useCallback(() => {
     resetGame()
     clearQueue()
+    setDisplayBoard(null)
     setScreen('start')
   }, [resetGame, clearQueue])
 
@@ -36,21 +43,34 @@ export default function App() {
     setOrder(order)
   }, [state, setOrder])
 
+  // Build animation steps: each step shows the pre-move board, then updates to post-move board.
+  const buildAnimationSteps = useCallback((steps: TurnStep[], boardBefore: Board): AnimationStep[] => {
+    setDisplayBoard(boardBefore)
+    return steps.map(step => ({
+      event: step.event,
+      onStepComplete: () => setDisplayBoard(step.boardAfter),
+    }))
+  }, [])
+
   const handleEndTurn = useCallback(() => {
     if (!state) return
+    const boardBefore = state.board
     setIsAnimating(true)
-    executeHumanMovesAction((events: AnimationEvent[]) => {
-      if (events.length > 0) {
-        enqueue(events, () => {
-          endTurn(() => {})
+    executeHumanMovesAction((steps: TurnStep[]) => {
+      const animSteps = buildAnimationSteps(steps, boardBefore)
+      if (animSteps.length > 0) {
+        enqueue(animSteps, () => {
+          setDisplayBoard(null)
+          endTurn()
           setIsAnimating(false)
         })
       } else {
-        endTurn(() => {})
+        setDisplayBoard(null)
+        endTurn()
         setIsAnimating(false)
       }
     })
-  }, [state, executeHumanMovesAction, endTurn, enqueue])
+  }, [state, executeHumanMovesAction, buildAnimationSteps, endTurn, enqueue])
 
   const handleRetire = useCallback(() => {
     retire()
@@ -64,17 +84,22 @@ export default function App() {
     const aiIndex = state.turn.activeAiIndex
 
     if (aiIndex >= aiPlayers.length) {
-      // All AIs done - call resolveAi to generate units and transition back to playerTurn
       resolveAi(aiIndex, () => {})
       return
     }
 
     setIsAnimating(true)
+    const boardBefore = state.board
     const timer = setTimeout(() => {
-      resolveAi(aiIndex, (events: AnimationEvent[]) => {
-        if (events.length > 0) {
-          enqueue(events, () => setIsAnimating(false))
+      resolveAi(aiIndex, (steps: TurnStep[]) => {
+        const animSteps = buildAnimationSteps(steps, boardBefore)
+        if (animSteps.length > 0) {
+          enqueue(animSteps, () => {
+            setDisplayBoard(null)
+            setIsAnimating(false)
+          })
         } else {
+          setDisplayBoard(null)
           setIsAnimating(false)
         }
       })
@@ -84,12 +109,12 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.phase, state?.turn.activeAiIndex])
 
-  // Transition to end screen when game ends
+  // Transition to end screen only after animations complete
   useEffect(() => {
-    if (state?.phase === 'end' && screen === 'game') {
+    if (state?.phase === 'end' && screen === 'game' && !isAnimating) {
       setScreen('end')
     }
-  }, [state?.phase, screen])
+  }, [state?.phase, screen, isAnimating])
 
   if (screen === 'start') {
     return <StartScreen onStart={handleStartGame} />
@@ -107,10 +132,13 @@ export default function App() {
 
   if (!state) return null
 
+  // Use displayBoard for rendering during animation; fall back to state.board otherwise
+  const renderedBoard = displayBoard ?? state.board
+
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <GameBoard
-        gameState={state}
+        gameState={{ ...state, board: renderedBoard }}
         activeAnimation={activeEvent}
         viewport={viewport.viewport}
         onPointerDown={viewport.onPointerDown}
