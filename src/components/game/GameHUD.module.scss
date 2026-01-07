@@ -3,9 +3,7 @@
 
 .hud {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  inset: 0;
   z-index: $z-hud;
   pointer-events: none;
 
@@ -14,73 +12,45 @@
   }
 }
 
+// ── Top bar ──────────────────────────────────────────────────────────────────
+
 .topBar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: $space-xs $space-md;
+  justify-content: flex-end;
+  gap: $space-sm;
+  padding: $space-sm;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.menuBtn {
+  width: 28px;
+  height: 28px;
   background: $color-surface;
-  border-bottom: 1px solid $color-border;
-}
-
-.turnInfo {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
-
-.turnNumber {
-  font-size: $font-size-sm;
-  color: $color-text-muted;
-}
-
-.status {
-  font-size: $font-size-sm;
-  color: $color-text-muted;
-}
-
-.playerTurn {
-  color: $color-text;
-}
-
-.controls {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
-
-.zoomControls {
-  display: flex;
-  gap: $space-xs;
-}
-
-.zoomBtn {
-  width: 22px;
-  height: 22px;
-  background: $color-bg;
   border: 1px solid $color-border;
-  border-radius: 0;
-  color: $color-text-muted;
+  color: $color-text;
   font-size: $font-size-md;
   font-family: $font-family;
-  line-height: 1;
   @include flex-center;
+  padding-bottom: 3px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
 
   &:hover {
+    background: $color-surface-raised;
     border-color: $color-border-dark;
-    color: $color-text;
   }
 }
 
 .legend {
   display: flex;
-  gap: $space-md;
-  padding: $space-xs $space-md;
-  background: rgba($color-surface, 0.85);
-  border-bottom: 1px solid $color-border;
+  gap: $space-sm;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .playerEntry {
@@ -92,7 +62,6 @@
 .colorDot {
   width: 8px;
   height: 8px;
-  border-radius: 0;
   flex-shrink: 0;
 }
 
@@ -106,12 +75,102 @@
   color: $color-text;
 }
 
-.nextTurnWrapper {
+// ── Bottom-left cluster ───────────────────────────────────────────────────────
+
+.bottomLeft {
   position: fixed;
-  bottom: $space-lg;
-  right: $space-lg;
-  pointer-events: auto;
+  bottom: $space-sm;
+  right: $space-sm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
 }
+
+.zoomControls {
+  display: flex;
+  gap: $space-xs;
+}
+
+.zoomBtn {
+  width: 28px;
+  height: 28px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  color: $color-text-muted;
+  font-size: $font-size-md;
+  font-family: $font-family;
+  line-height: 1;
+  @include flex-center;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-border-dark;
+    color: $color-text;
+  }
+}
+
+$hex-clip: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+
+.endTurnWrap {
+  width: 82px;
+  height: 72px;
+  background: $color-border-dark;
+  clip-path: $hex-clip;
+  @include flex-center;
+}
+
+.waitingWrap {
+  background: $color-border;
+}
+
+.endTurnBtn {
+  width: 80px;
+  height: 70px;
+  background: $color-surface;
+  border: none;
+  color: $color-text;
+  font-size: $font-size-sm;
+  font-family: $font-family;
+  clip-path: $hex-clip;
+  @include flex-center;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $color-surface-raised;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.waiting {
+  background: $color-bg;
+  color: $color-text-muted;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid $color-border;
+  border-top-color: $color-text-muted;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.turnNumber {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  letter-spacing: 0.05em;
+}
+
+// ── Retire modal ──────────────────────────────────────────────────────────────
 
 .menuContent {
   display: flex;

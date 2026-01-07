@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { GameState } from '../../types/game'
-import { Button } from '../shared/Button'
 import { Modal } from '../shared/Modal'
+import { Button } from '../shared/Button'
 import styles from './GameHUD.module.scss'
 
 interface GameHUDProps {
@@ -16,55 +16,46 @@ interface GameHUDProps {
 export function GameHUD({ gameState, onEndTurn, onRetire, onZoomIn, onZoomOut, isAnimating }: GameHUDProps) {
   const [showRetireConfirm, setShowRetireConfirm] = useState(false)
   const { phase, players, humanPlayerId, turn } = gameState
-  const isPlayerTurn = phase === 'playerTurn'
-
-  const statusText = isAnimating
-    ? 'Animating...'
-    : phase === 'playerTurn'
-      ? 'Your Turn'
-      : phase === 'aiTurn'
-        ? 'AI Thinking...'
-        : ''
+  const isPlayerTurn = phase === 'playerTurn' && !isAnimating
 
   return (
     <>
       <div className={styles.hud}>
+        {/* Top bar: burger menu left, player list right */}
         <div className={styles.topBar}>
-          <div className={styles.turnInfo}>
-            <span className={styles.turnNumber}>Turn {turn.turnNumber}</span>
-            <span className={`${styles.status} ${isPlayerTurn ? styles.playerTurn : ''}`}>
-              {statusText}
-            </span>
+          <div className={styles.legend}>
+            {players.filter(p => !p.isEliminated).map(p => (
+              <div key={p.id} className={styles.playerEntry}>
+                <div className={styles.colorDot} style={{ background: p.color }} />
+                <span className={`${styles.playerName} ${p.id === humanPlayerId ? styles.you : ''}`}>
+                  {p.name}{p.id === humanPlayerId ? ' (You)' : ''}
+                </span>
+              </div>
+            ))}
           </div>
-          <div className={styles.controls}>
-            <div className={styles.zoomControls}>
-              <button className={styles.zoomBtn} onClick={onZoomOut} title="Zoom out">&#8722;</button>
-              <button className={styles.zoomBtn} onClick={onZoomIn} title="Zoom in">&#43;</button>
-            </div>
-            <Button onClick={() => setShowRetireConfirm(true)} variant="secondary">
-              Menu
-            </Button>
-          </div>
+          <button className={styles.menuBtn} onClick={() => setShowRetireConfirm(true)} title="Menu">
+            &#9776;
+          </button>
         </div>
 
-        <div className={styles.legend}>
-          {players.filter(p => !p.isEliminated).map(p => (
-            <div key={p.id} className={styles.playerEntry}>
-              <div className={styles.colorDot} style={{ background: p.color }} />
-              <span className={`${styles.playerName} ${p.id === humanPlayerId ? styles.you : ''}`}>
-                {p.name}{p.id === humanPlayerId ? ' (You)' : ''}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {isPlayerTurn && !isAnimating && (
-          <div className={styles.nextTurnWrapper}>
-            <Button onClick={onEndTurn} variant="primary">
-              End Turn
-            </Button>
+        {/* Bottom-left: zoom, end turn button, turn number */}
+        <div className={styles.bottomLeft}>
+          <div className={styles.zoomControls}>
+            <button className={styles.zoomBtn} onClick={onZoomOut} title="Zoom out">&#8722;</button>
+            <button className={styles.zoomBtn} onClick={onZoomIn} title="Zoom in">&#43;</button>
           </div>
-        )}
+          <div className={`${styles.endTurnWrap} ${!isPlayerTurn ? styles.waitingWrap : ''}`}>
+            <button
+              className={`${styles.endTurnBtn} ${!isPlayerTurn ? styles.waiting : ''}`}
+              onClick={isPlayerTurn ? onEndTurn : undefined}
+              disabled={!isPlayerTurn}
+              title="End Turn"
+            >
+              {!isPlayerTurn ? <span className={styles.spinner} /> : 'End Turn'}
+            </button>
+          </div>
+          <span className={styles.turnNumber}>Turn {turn.turnNumber}</span>
+        </div>
       </div>
 
       {showRetireConfirm && (
