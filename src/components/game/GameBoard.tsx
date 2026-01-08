@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import type { GameState } from '../../types/game'
 import type { AnimationEvent } from '../../types/animation'
 import type { PlayerId } from '../../types/player'
@@ -16,6 +16,8 @@ interface GameBoardProps {
   onPointerDown: (e: React.PointerEvent) => void
   onPointerMove: (e: React.PointerEvent) => void
   onPointerUp: (e: React.PointerEvent) => void
+  onWheel: (e: React.WheelEvent) => void
+  onReady: (width: number, height: number) => void
   onSetOrder: (fromKey: string, toKey: string, units: number) => void
   onCancelOrder: (fromKey: string) => void
 }
@@ -29,6 +31,8 @@ export function GameBoard({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onWheel,
+  onReady,
   onSetOrder,
   onCancelOrder,
 }: GameBoardProps) {
@@ -55,6 +59,11 @@ export function GameBoard({
     }
     return { minX, minY, width: maxX - minX, height: maxY - minY }
   }, [board])
+
+  useEffect(() => {
+    onReady(width, height)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const validDestinations = useMemo(() => {
     if (!selectedKey) return new Set<string>()
@@ -120,6 +129,7 @@ export function GameBoard({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onWheel={onWheel}
       >
         <div
           className={styles.boardTransform}

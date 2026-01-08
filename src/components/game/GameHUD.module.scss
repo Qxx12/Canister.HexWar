@@ -87,28 +87,6 @@
   gap: $space-xs;
 }
 
-.zoomControls {
-  display: flex;
-  gap: $space-xs;
-}
-
-.zoomBtn {
-  width: 28px;
-  height: 28px;
-  background: $color-surface;
-  border: 1px solid $color-border;
-  color: $color-text-muted;
-  font-size: $font-size-md;
-  font-family: $font-family;
-  line-height: 1;
-  @include flex-center;
-  cursor: pointer;
-
-  &:hover {
-    border-color: $color-border-dark;
-    color: $color-text;
-  }
-}
 
 $hex-clip: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
 

@@ -8,12 +8,10 @@ interface GameHUDProps {
   gameState: GameState
   onEndTurn: () => void
   onRetire: () => void
-  onZoomIn: () => void
-  onZoomOut: () => void
   isAnimating: boolean
 }
 
-export function GameHUD({ gameState, onEndTurn, onRetire, onZoomIn, onZoomOut, isAnimating }: GameHUDProps) {
+export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating }: GameHUDProps) {
   const [showRetireConfirm, setShowRetireConfirm] = useState(false)
   const { phase, players, humanPlayerId, turn } = gameState
   const isPlayerTurn = phase === 'playerTurn' && !isAnimating
@@ -40,10 +38,6 @@ export function GameHUD({ gameState, onEndTurn, onRetire, onZoomIn, onZoomOut, i
 
         {/* Bottom-left: zoom, end turn button, turn number */}
         <div className={styles.bottomLeft}>
-          <div className={styles.zoomControls}>
-            <button className={styles.zoomBtn} onClick={onZoomOut} title="Zoom out">&#8722;</button>
-            <button className={styles.zoomBtn} onClick={onZoomIn} title="Zoom in">&#43;</button>
-          </div>
           <div className={`${styles.endTurnWrap} ${!isPlayerTurn ? styles.waitingWrap : ''}`}>
             <button
               className={`${styles.endTurnBtn} ${!isPlayerTurn ? styles.waiting : ''}`}

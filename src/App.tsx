@@ -18,6 +18,9 @@ export default function App() {
   const [screen, setScreen] = useState<AppScreen>('start')
   const { state, startGame, resetGame, setOrder, cancelOrder, executeHumanMovesAction, endTurn, resolveAi, retire } = useGameState()
   const viewport = useViewport()
+  const handleBoardReady = useCallback((w: number, h: number) => {
+    viewport.centerBoard(w, h)
+  }, [viewport.centerBoard])
   const { activeEvent, enqueue, clearQueue } = useAnimationQueue()
   const [isAnimating, setIsAnimating] = useState(false)
 
@@ -144,6 +147,8 @@ export default function App() {
         onPointerDown={viewport.onPointerDown}
         onPointerMove={viewport.onPointerMove}
         onPointerUp={viewport.onPointerUp}
+        onWheel={viewport.onWheel}
+        onReady={handleBoardReady}
         onSetOrder={handleSetOrder}
         onCancelOrder={cancelOrder}
       />
@@ -151,8 +156,6 @@ export default function App() {
         gameState={state}
         onEndTurn={handleEndTurn}
         onRetire={handleRetire}
-        onZoomIn={viewport.zoomIn}
-        onZoomOut={viewport.zoomOut}
         isAnimating={isAnimating}
       />
     </div>
