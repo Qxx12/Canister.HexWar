@@ -36,14 +36,9 @@
   font-size: $font-size-md;
   font-family: $font-family;
   @include flex-center;
-  padding-bottom: 3px;
-  cursor: pointer;
+  @include button-base;
+  padding-bottom: 5px;
   flex-shrink: 0;
-
-  &:hover {
-    background: $color-surface-raised;
-    border-color: $color-border-dark;
-  }
 }
 
 .legend {
@@ -96,6 +91,7 @@ $hex-clip: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
   background: $color-border-dark;
   clip-path: $hex-clip;
   @include flex-center;
+  @include hex-button-hover;
 }
 
 .waitingWrap {
@@ -108,23 +104,24 @@ $hex-clip: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
   background: $color-surface;
   border: none;
   color: $color-text;
-  font-size: $font-size-sm;
+  font-size: $font-size-xl;
   font-family: $font-family;
   clip-path: $hex-clip;
   @include flex-center;
   cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: $color-surface-raised;
-  }
 
   &:disabled {
     cursor: default;
   }
 }
 
+.playIcon {
+  position: relative;
+  top: -3px;
+}
+
 .waiting {
-  background: $color-bg;
+  background: $color-surface;
   color: $color-text-muted;
 }
 

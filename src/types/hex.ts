@@ -30,18 +30,18 @@ export function keyToHex(key: string): AxialCoord {
   return { q, r }
 }
 
-// Pixel position for flat-top hex (returns center coordinates)
+// Pixel position for pointy-top hex (returns center coordinates)
 export function axialToPixel(coord: AxialCoord, hexSize: number): { x: number; y: number } {
   return {
-    x: hexSize * (3 / 2) * coord.q,
-    y: hexSize * (Math.sqrt(3) / 2 * coord.q + Math.sqrt(3) * coord.r),
+    x: hexSize * (Math.sqrt(3) * coord.q + Math.sqrt(3) / 2 * coord.r),
+    y: hexSize * (3 / 2) * coord.r,
   }
 }
 
-// Get the 6 corner points of a flat-top hex (for SVG polygon)
+// Get the 6 corner points of a pointy-top hex (for SVG polygon)
 export function hexCorners(cx: number, cy: number, size: number): Array<{ x: number; y: number }> {
   return Array.from({ length: 6 }, (_, i) => {
-    const angleDeg = 60 * i
+    const angleDeg = 60 * i + 30
     const angleRad = (Math.PI / 180) * angleDeg
     return {
       x: cx + size * Math.cos(angleRad),

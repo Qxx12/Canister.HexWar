@@ -16,11 +16,12 @@
 }
 
 .danger {
-  background: $color-surface;
-  color: $color-warning;
-  border-color: $color-border;
+  background: $color-warning;
+  color: #fff;
+  border-color: $color-warning;
 
   &:hover {
-    border-color: $color-warning;
+    background: darken($color-warning, 8%);
+    border-color: darken($color-warning, 8%);
   }
 }

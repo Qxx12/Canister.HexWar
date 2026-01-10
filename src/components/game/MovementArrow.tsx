@@ -50,6 +50,9 @@ export function MovementArrow({ order, board, hexSize, isClamped }: MovementArro
       <polygon
         points={tipPoints}
         fill={color}
+        stroke="white"
+        strokeWidth={1.5}
+        strokeLinejoin="round"
         transform={`translate(${x2}, ${y2}) rotate(${angleDeg})`}
       />
       <text
@@ -59,6 +62,9 @@ export function MovementArrow({ order, board, hexSize, isClamped }: MovementArro
         dominantBaseline="middle"
         className={styles.label}
         fill={color}
+        stroke="white"
+        strokeWidth={2.5}
+        paintOrder="stroke fill"
         fontSize={hexSize * 0.28}
       >
         {order.requestedUnits}

@@ -83,7 +83,7 @@ export function resolvePlayerTurn(
       toKey: order.toKey,
       playerId,
       units: result.unitsSent,
-      durationMs: kind === 'move' ? 220 : 380,
+      durationMs: kind === 'move' ? 380 : 520,
     }
     animationEvents.push(event)
 

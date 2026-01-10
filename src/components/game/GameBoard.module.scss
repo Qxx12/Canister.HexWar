@@ -7,10 +7,16 @@
   overflow: hidden;
   background: $color-bg;
   cursor: grab;
+  animation: fadeIn 0.6s ease-out both;
 
   &:active {
     cursor: grabbing;
   }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .boardTransform {

@@ -14,10 +14,11 @@
   font-size: $font-size-base;
   font-weight: $font-weight-normal;
   padding: $space-xs $space-sm;
-  transition: border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   letter-spacing: 0.02em;
 
   &:hover {
+    background: $color-surface-raised;
     border-color: $color-border-dark;
   }
 
@@ -28,6 +29,14 @@
   &:disabled {
     opacity: 0.35;
     cursor: not-allowed;
+  }
+}
+
+@mixin hex-button-hover {
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: $color-text;
   }
 }
 

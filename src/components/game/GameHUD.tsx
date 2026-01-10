@@ -45,7 +45,7 @@ export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating }: GameHUD
               disabled={!isPlayerTurn}
               title="End Turn"
             >
-              {!isPlayerTurn ? <span className={styles.spinner} /> : 'End Turn'}
+              {!isPlayerTurn ? <span className={styles.spinner} /> : <span className={styles.playIcon}>▶</span>}
             </button>
           </div>
           <span className={styles.turnNumber}>Turn {turn.turnNumber}</span>

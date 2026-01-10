@@ -13,6 +13,16 @@ interface HexTileProps {
   onClick: () => void
 }
 
+function fourPointedStar(cx: number, cy: number, outer: number, inner: number): string {
+  const pts: string[] = []
+  for (let i = 0; i < 8; i++) {
+    const angle = (Math.PI / 4) * i - Math.PI / 2
+    const r = i % 2 === 0 ? outer : inner
+    pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`)
+  }
+  return pts.join(' ')
+}
+
 export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestination, onClick }: HexTileProps) {
   const { x: cx, y: cy } = axialToPixel(tile.coord, hexSize)
   const corners = hexCorners(cx, cy, hexSize - 1) // -1 for gap
@@ -24,6 +34,11 @@ export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestina
 
   const strokeColor = isSelected ? '#111' : isValidDestination ? '#555' : '#b0b0b0'
   const strokeWidth = isSelected || isValidDestination ? 2 : 1
+
+  const starOuter = hexSize * 0.12
+  const starInner = hexSize * 0.05
+  const starY = cy - hexSize * 0.42
+  const starColor = tile.startOwner ? PLAYER_COLORS[playerIndex(tile.startOwner)] : '#666'
 
   return (
     <g className={styles.hexGroup} onClick={onClick} style={{ cursor: 'pointer' }}>
@@ -37,7 +52,7 @@ export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestina
       {tile.owner !== null && (
         <text
           x={cx}
-          y={tile.isStartTile ? cy + 6 : cy + 5}
+          y={cy}
           textAnchor="middle"
           dominantBaseline="middle"
           className={styles.unitCount}
@@ -47,17 +62,13 @@ export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestina
         </text>
       )}
       {tile.isStartTile && (
-        <text
-          x={cx}
-          y={cy - hexSize * 0.25}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className={styles.crown}
-          fontSize={hexSize * 0.3}
-          fill={tile.startOwner ? PLAYER_COLORS[playerIndex(tile.startOwner)] : '#666'}
-        >
-          &#9819;
-        </text>
+        <polygon
+          points={fourPointedStar(cx, starY, starOuter, starInner)}
+          fill={starColor}
+          stroke="white"
+          strokeWidth={1}
+          strokeLinejoin="round"
+        />
       )}
     </g>
   )
