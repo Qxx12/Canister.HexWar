@@ -1,4 +1,4 @@
-import type { Board, Tile } from '../types/board'
+import type { Board, Tile, TerrainType } from '../types/board'
 import type { AxialCoord } from '../types/hex'
 import { hexToKey, hexNeighbors, hexDistance } from '../types/hex'
 import type { PlayerId } from '../types/player'
@@ -77,6 +77,15 @@ function placeStartTiles(tileKeys: string[], playerIds: PlayerId[], rng: () => n
   return bestSet
 }
 
+function terrainFor(q: number, r: number): TerrainType {
+  // Latitude: 0 at equator, 1 at poles (based on r, with slight q-based noise)
+  const lat = Math.abs(r) / (BOARD_SIZE / 2) + Math.sin(q * 0.8) * 0.08
+  if (lat > 0.75) return 'tundra'
+  if (lat > 0.45) return 'grassland'
+  if (lat > 0.2)  return 'plains'
+  return 'desert'
+}
+
 export function generateBoard(playerIds: PlayerId[], rng: () => number = Math.random): Board {
   const tileKeys = generateBlob(rng)
   const board: Board = new Map()
@@ -89,6 +98,7 @@ export function generateBoard(playerIds: PlayerId[], rng: () => number = Math.ra
       units: 0,
       isStartTile: false,
       startOwner: null,
+      terrain: terrainFor(q, r),
     }
     board.set(key, tile)
   }

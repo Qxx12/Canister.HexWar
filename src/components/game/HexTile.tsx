@@ -2,6 +2,7 @@ import type { Tile } from '../../types/board'
 import type { PlayerId } from '../../types/player'
 import { axialToPixel, hexCorners } from '../../types/hex'
 import { PLAYER_COLORS } from '../../types/player'
+import { TERRAIN_COLORS } from '../../types/board'
 import styles from './HexTile.module.scss'
 
 interface HexTileProps {
@@ -28,9 +29,7 @@ export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestina
   const corners = hexCorners(cx, cy, hexSize - 1) // -1 for gap
   const points = corners.map(c => `${c.x},${c.y}`).join(' ')
 
-  const fillColor = tile.owner !== null
-    ? PLAYER_COLORS[playerIndex(tile.owner)]
-    : '#d8d8d8'
+  const fillColor = TERRAIN_COLORS[tile.terrain] ?? '#d8d8d8'
 
   const strokeColor = isSelected ? '#111' : isValidDestination ? '#555' : '#b0b0b0'
   const strokeWidth = isSelected || isValidDestination ? 2 : 1
@@ -57,6 +56,10 @@ export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestina
           dominantBaseline="middle"
           className={styles.unitCount}
           fontSize={hexSize * 0.35}
+          fill={PLAYER_COLORS[playerIndex(tile.owner)]}
+          stroke="white"
+          strokeWidth={2.5}
+          paintOrder="stroke fill"
         >
           {tile.units}
         </text>

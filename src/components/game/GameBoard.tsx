@@ -6,7 +6,8 @@ import { HexTile } from './HexTile'
 import { MovementArrow } from './MovementArrow'
 import { AnimationLayer } from './AnimationLayer'
 import { OrderModal } from './OrderModal'
-import { axialToPixel, hexNeighbors, hexToKey } from '../../types/hex'
+import { axialToPixel, hexCorners, hexNeighbors, hexToKey } from '../../types/hex'
+import { PLAYER_COLORS } from '../../types/player'
 import styles from './GameBoard.module.scss'
 
 interface GameBoardProps {
@@ -23,6 +24,62 @@ interface GameBoardProps {
 }
 
 const HEX_SIZE = 36
+
+// Renders colored borders along territory edges.
+// Shared edges between two different players are split in half, one color each.
+function TerritoryBorders({ board, playerIndex }: { board: Board; playerIndex: (id: PlayerId) => number }) {
+  const segments = useMemo(() => {
+    // Collect border segments keyed by canonical edge id (sorted tile pair)
+    type Seg = { c1: { x: number; y: number }; c2: { x: number; y: number }; color: string }
+    const edgeMap = new Map<string, Seg[]>()
+
+    for (const [key, tile] of board) {
+      if (tile.owner === null) continue
+      const { x: cx, y: cy } = axialToPixel(tile.coord, HEX_SIZE)
+      const corners = hexCorners(cx, cy, HEX_SIZE - 1)
+      const color = PLAYER_COLORS[playerIndex(tile.owner)]
+      const neighbors = hexNeighbors(tile.coord)
+      for (let j = 0; j < 6; j++) {
+        const nKey = hexToKey(neighbors[j])
+        const neighbor = board.get(nKey)
+        if (!neighbor || neighbor.owner !== tile.owner) {
+          const c1 = corners[(5 - j + 6) % 6]
+          const c2 = corners[(6 - j + 6) % 6]
+          const edgeKey = [key, nKey].sort().join('|')
+          const segs = edgeMap.get(edgeKey) ?? []
+          segs.push({ c1, c2, color })
+          edgeMap.set(edgeKey, segs)
+        }
+      }
+    }
+
+    // Build render list: external edges drawn in full, shared edges split in two halves
+    const result: { key: string; x1: number; y1: number; x2: number; y2: number; color: string }[] = []
+    let i = 0
+    for (const [edgeKey, segs] of edgeMap) {
+      const { c1, c2 } = segs[0]
+      if (segs.length === 1) {
+        result.push({ key: edgeKey, x1: c1.x, y1: c1.y, x2: c2.x, y2: c2.y, color: segs[0].color })
+      } else {
+        const mx = (c1.x + c2.x) / 2
+        const my = (c1.y + c2.y) / 2
+        result.push({ key: `${edgeKey}-a`, x1: c1.x, y1: c1.y, x2: mx, y2: my, color: segs[0].color })
+        result.push({ key: `${edgeKey}-b`, x1: mx, y1: my, x2: c2.x, y2: c2.y, color: segs[1].color })
+      }
+      i++
+    }
+    return result
+  }, [board, playerIndex])
+
+  return (
+    <g>
+      {segments.map(({ key, x1, y1, x2, y2, color }) => (
+        <line key={key} x1={x1} y1={y1} x2={x2} y2={y2}
+          stroke={color} strokeWidth={2.5} strokeLinecap="round" />
+      ))}
+    </g>
+  )
+}
 
 export function GameBoard({
   gameState,
@@ -166,6 +223,8 @@ export function GameBoard({
                 />
               )
             })}
+
+            <TerritoryBorders board={board} playerIndex={playerIndex} />
 
             {isPlayerTurn && Array.from(humanOrders.entries()).map(([fromKey, order]) => {
               const fromTileForArrow = board.get(fromKey)
