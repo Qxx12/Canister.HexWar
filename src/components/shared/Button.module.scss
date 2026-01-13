@@ -1,5 +1,6 @@
 @use '../../styles/tokens' as *;
 @use '../../styles/mixins' as *;
+@use 'sass:color';
 
 .button {
   @include button-base;
@@ -21,7 +22,7 @@
   border-color: $color-warning;
 
   &:hover {
-    background: darken($color-warning, 8%);
-    border-color: darken($color-warning, 8%);
+    background: color.adjust($color-warning, $lightness: -8%);
+    border-color: color.adjust($color-warning, $lightness: -8%);
   }
 }
