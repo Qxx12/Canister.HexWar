@@ -4,13 +4,14 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(240, 240, 240, 0.7);
+  background: rgba(30, 18, 10, 0.60);
   @include flex-center;
   z-index: $z-modal;
 }
 
 .dialog {
-  @include surface;
+  background: #e8dfd2;
+  border: 1px solid #c4b8a8;
   padding: $space-lg;
   min-width: 280px;
   max-width: 400px;

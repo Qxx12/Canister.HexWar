@@ -31,8 +31,8 @@ export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestina
 
   const fillColor = TERRAIN_COLORS[tile.terrain] ?? '#d8d8d8'
 
-  const strokeColor = isSelected ? '#111' : isValidDestination ? '#555' : '#b0b0b0'
-  const strokeWidth = isSelected || isValidDestination ? 2 : 1
+  const strokeColor = isValidDestination ? '#76e600' : '#b0b0b0'
+  const strokeWidth = isValidDestination ? 2 : 1
 
   const starOuter = hexSize * 0.12
   const starInner = hexSize * 0.05

@@ -24,9 +24,9 @@ $hex-clip: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
 
 .hexBgCell {
   fill: none;
-  stroke: $color-border;
+  stroke: #f0ece6;
   stroke-width: 1;
-  opacity: 0.2;
+  opacity: 0.12;
 }
 
 // ── Content ───────────────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ $hex-clip: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
 .title {
   font-size: 56px;
   font-weight: $font-weight-normal;
-  color: $color-text;
+  color: #fff8f0;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin: 0;
@@ -58,14 +58,14 @@ $hex-clip: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
   display: flex;
   flex-direction: column;
   gap: $space-sm;
-  color: $color-text-muted;
+  color: rgba(255, 248, 240, 0.80);
   font-size: $font-size-sm;
   line-height: 1.7;
   animation: fadeUp 0.5s ease-out 0.15s both;
 
   li::before {
     content: '— ';
-    color: $color-text-faint;
+    color: rgba(255, 248, 240, 0.45);
   }
 }
 

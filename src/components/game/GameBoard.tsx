@@ -75,7 +75,7 @@ function TerritoryBorders({ board, playerIndex }: { board: Board; playerIndex: (
     <g>
       {segments.map(({ key, x1, y1, x2, y2, color }) => (
         <line key={key} x1={x1} y1={y1} x2={x2} y2={y2}
-          stroke={color} strokeWidth={2.5} strokeLinecap="round" />
+          stroke={color} strokeWidth={3} strokeLinecap="round" />
       ))}
     </g>
   )
@@ -209,20 +209,22 @@ export function GameBoard({
               </marker>
             </defs>
 
-            {tiles.map(tile => {
-              const key = hexToKey(tile.coord)
-              return (
-                <HexTile
-                  key={key}
-                  tile={tile}
-                  hexSize={HEX_SIZE}
-                  playerIndex={playerIndex}
-                  isSelected={selectedKey === key}
-                  isValidDestination={validDestinations.has(key)}
-                  onClick={() => handleTileClick(key)}
-                />
-              )
-            })}
+            <g style={{ filter: 'drop-shadow(0px 2px 3px rgba(0,0,0,0.30))' }}>
+              {tiles.map(tile => {
+                const key = hexToKey(tile.coord)
+                return (
+                  <HexTile
+                    key={key}
+                    tile={tile}
+                    hexSize={HEX_SIZE}
+                    playerIndex={playerIndex}
+                    isSelected={selectedKey === key}
+                    isValidDestination={validDestinations.has(key)}
+                    onClick={() => handleTileClick(key)}
+                  />
+                )
+              })}
+            </g>
 
             <TerritoryBorders board={board} playerIndex={playerIndex} />
 

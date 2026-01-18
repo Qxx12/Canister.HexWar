@@ -24,8 +24,8 @@
 }
 
 .input {
-  background: $color-bg;
-  border: 1px solid $color-border;
+  background: #c8bfb0;
+  border: 1px solid #a89880;
   border-radius: 0;
   color: $color-text;
   font-size: $font-size-base;
@@ -34,7 +34,7 @@
   width: 100%;
 
   &:focus {
-    border-color: $color-border-dark;
+    border-color: #7a6848;
     outline: none;
   }
 }

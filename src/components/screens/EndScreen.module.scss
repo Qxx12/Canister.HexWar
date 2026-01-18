@@ -1,6 +1,10 @@
 @use '../../styles/tokens' as *;
 @use '../../styles/mixins' as *;
 
+$text:       #fff8f0;
+$text-muted: rgba(255, 248, 240, 0.65);
+$border:     rgba(255, 248, 240, 0.18);
+
 .screen {
   width: 100%;
   height: 100%;
@@ -25,12 +29,12 @@
   letter-spacing: 0.02em;
 }
 
-.win    { color: $color-text; }
-.lose   { color: $color-text-muted; }
-.retire { color: $color-text-muted; }
+.win    { color: $text; }
+.lose   { color: $text-muted; }
+.retire { color: $text-muted; }
 
 .subtitle {
-  color: $color-text-muted;
+  color: $text-muted;
   font-size: $font-size-sm;
   margin-top: -$space-sm;
 }
@@ -43,8 +47,8 @@
   th {
     padding: $space-xs $space-sm;
     text-align: right;
-    color: $color-text-muted;
-    border-bottom: 1px solid $color-border;
+    color: $text-muted;
+    border-bottom: 1px solid $border;
     font-weight: $font-weight-normal;
     letter-spacing: 0.04em;
 
@@ -54,15 +58,15 @@
   td {
     padding: $space-xs $space-sm;
     text-align: right;
-    color: $color-text;
-    border-bottom: 1px solid $color-border;
+    color: $text-muted;
+    border-bottom: 1px solid $border;
 
     &:first-child { text-align: left; }
   }
 }
 
 .winner td {
-  color: $color-text;
+  color: $text;
   font-weight: $font-weight-bold;
 }
 
@@ -81,5 +85,5 @@
 
 .crown {
   margin-left: $space-xs;
-  color: $color-text-muted;
+  color: $text-muted;
 }
