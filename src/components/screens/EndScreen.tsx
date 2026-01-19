@@ -33,9 +33,9 @@ export function EndScreen({ stats, players, onRestart }: EndScreenProps) {
             <tr>
               <th>Player</th>
               <th>Tiles</th>
-              <th>Generated</th>
-              <th>Killed</th>
-              <th>Conquered</th>
+              <th>Tiles Captured</th>
+              <th>Tiles Lost</th>
+              <th>Units Killed</th>
             </tr>
           </thead>
           <tbody>
@@ -53,9 +53,9 @@ export function EndScreen({ stats, players, onRestart }: EndScreenProps) {
                     </div>
                   </td>
                   <td>{s.tilesAtEnd}</td>
-                  <td>{s.unitsGenerated}</td>
-                  <td>{s.unitsKilled}</td>
                   <td>{s.tilesConquered}</td>
+                  <td>{s.tilesLost}</td>
+                  <td>{s.unitsKilled}</td>
                 </tr>
               )
             })}

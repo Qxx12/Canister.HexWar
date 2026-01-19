@@ -51,23 +51,21 @@ export function resolvePlayerTurn(
     if (result.unitsSent === 0) continue
 
     if (result.defenderCasualties > 0 && result.defendingPlayerId) {
-      const attackerStats = updatedStats.get(playerId)
-      if (attackerStats) {
-        updatedStats.set(playerId, {
-          ...attackerStats,
-          unitsKilled: attackerStats.unitsKilled + result.defenderCasualties,
-        })
+      const aStats = updatedStats.get(playerId)
+      if (aStats) {
+        updatedStats.set(playerId, { ...aStats, unitsKilled: aStats.unitsKilled + result.defenderCasualties })
       }
-      if (result.conquered) {
-        const aStats = updatedStats.get(playerId)
-        if (aStats) {
-          updatedStats.set(playerId, { ...aStats, tilesConquered: aStats.tilesConquered + 1 })
-        }
-      }
-    } else if (result.conquered && result.defendingPlayerId === null) {
+    }
+    if (result.conquered) {
       const aStats = updatedStats.get(playerId)
       if (aStats) {
         updatedStats.set(playerId, { ...aStats, tilesConquered: aStats.tilesConquered + 1 })
+      }
+      if (result.defendingPlayerId) {
+        const dStats = updatedStats.get(result.defendingPlayerId)
+        if (dStats) {
+          updatedStats.set(result.defendingPlayerId, { ...dStats, tilesLost: dStats.tilesLost + 1 })
+        }
       }
     }
 

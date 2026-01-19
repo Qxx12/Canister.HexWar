@@ -5,6 +5,7 @@ export interface PlayerStats {
   unitsGenerated: number
   unitsKilled: number
   tilesConquered: number
+  tilesLost: number
   tilesAtEnd: number
 }
 

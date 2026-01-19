@@ -18,8 +18,8 @@ describe('generateUnits', () => {
       { coord: { q: 1, r: 0 }, owner: 'p1', units: 2, isStartTile: false, startOwner: null },
     ])
     const stats = new Map<string, PlayerStats>([
-      ['p0', { playerId: 'p0', unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesAtEnd: 0 }],
-      ['p1', { playerId: 'p1', unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesAtEnd: 0 }],
+      ['p0', { playerId: 'p0', unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesLost: 0, tilesAtEnd: 0 }],
+      ['p1', { playerId: 'p1', unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesLost: 0, tilesAtEnd: 0 }],
     ])
     const newBoard = generateUnits(board, stats)
     expect(newBoard.get('0,0')!.units).toBe(4)

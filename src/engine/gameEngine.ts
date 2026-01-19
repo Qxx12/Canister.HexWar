@@ -16,9 +16,10 @@ const AI_COUNT = 5
 function createInitialStats(playerIds: PlayerId[]): Map<PlayerId, PlayerStats> {
   return new Map(playerIds.map(id => [id, {
     playerId: id,
-    unitsGenerated: 6, // start with 1 unit per player × 6 players... actually track from 0
+    unitsGenerated: 0,
     unitsKilled: 0,
     tilesConquered: 0,
+    tilesLost: 0,
     tilesAtEnd: 0,
   }]))
 }
@@ -115,12 +116,14 @@ export function resolveAiTurn(state: GameState, aiIndex: number): {
   const aiPlayers = state.players.filter(p => p.type === 'ai' && !p.isEliminated)
   if (aiIndex >= aiPlayers.length) {
     // All AIs done - generate units and start next player turn with fresh orders
-    const newBoard = generateUnits(state.board, new Map(state.runningStats))
+    const updatedStats = new Map(state.runningStats)
+    const newBoard = generateUnits(state.board, updatedStats)
     const freshOrders: AllOrders = new Map(state.players.map(p => [p.id, new Map()]))
     const nextState: GameState = {
       ...state,
       board: newBoard,
       orders: freshOrders,
+      runningStats: updatedStats,
       phase: 'playerTurn',
       turn: { turnNumber: state.turn.turnNumber + 1, activeAiIndex: 0 },
     }
@@ -179,7 +182,7 @@ function buildEndState(
     outcome,
     winnerId,
     playerStats: players.map(p => {
-      const s = runningStats.get(p.id) ?? { playerId: p.id, unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesAtEnd: 0 }
+      const s = runningStats.get(p.id) ?? { playerId: p.id, unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesLost: 0, tilesAtEnd: 0 }
       const tilesAtEnd = [...board.values()].filter(t => t.owner === p.id).length
       return { ...s, tilesAtEnd }
     }),
@@ -204,7 +207,7 @@ export function retireGame(state: GameState): GameState {
     outcome: 'retire',
     winnerId: null,
     playerStats: state.players.map(p => {
-      const s = state.runningStats.get(p.id) ?? { playerId: p.id, unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesAtEnd: 0 }
+      const s = state.runningStats.get(p.id) ?? { playerId: p.id, unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesLost: 0, tilesAtEnd: 0 }
       const tilesAtEnd = [...state.board.values()].filter(t => t.owner === p.id).length
       return { ...s, tilesAtEnd }
     }),

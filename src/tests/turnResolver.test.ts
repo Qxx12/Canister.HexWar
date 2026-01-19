@@ -20,8 +20,8 @@ const players: Player[] = [
 
 function makeStats(): Map<string, PlayerStats> {
   return new Map([
-    ['p0', { playerId: 'p0', unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesAtEnd: 0 }],
-    ['p1', { playerId: 'p1', unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesAtEnd: 0 }],
+    ['p0', { playerId: 'p0', unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesLost: 0, tilesAtEnd: 0 }],
+    ['p1', { playerId: 'p1', unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesLost: 0, tilesAtEnd: 0 }],
   ])
 }
 
