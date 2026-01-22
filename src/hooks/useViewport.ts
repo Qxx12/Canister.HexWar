@@ -50,7 +50,7 @@ export function useViewport() {
 
   const onWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault()
-    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1
+    const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2
     const cx = window.innerWidth / 2
     const cy = window.innerHeight / 2
     setViewport(v => zoomToward(v, v.zoom * factor, cx, cy))

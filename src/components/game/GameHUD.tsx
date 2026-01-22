@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { GameState } from '../../types/game'
 import { Modal } from '../shared/Modal'
 import { Button } from '../shared/Button'
@@ -15,6 +15,15 @@ export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating }: GameHUD
   const [showRetireConfirm, setShowRetireConfirm] = useState(false)
   const { phase, players, humanPlayerId, turn } = gameState
   const isPlayerTurn = phase === 'playerTurn' && !isAnimating
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !showRetireConfirm) setShowRetireConfirm(true)
+      if (e.key === 'Enter' && isPlayerTurn && !showRetireConfirm) onEndTurn()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isPlayerTurn, showRetireConfirm, onEndTurn])
 
   return (
     <>
