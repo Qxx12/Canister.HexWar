@@ -19,6 +19,7 @@ export interface Tile {
   isStartTile: boolean
   startOwner: PlayerId | null
   terrain: TerrainType
+  newlyConquered: boolean
 }
 
 export type Board = Map<string, Tile>

@@ -9,11 +9,14 @@ export function generateUnits(
   const newBoard = new Map(board)
   for (const [key, tile] of newBoard) {
     if (tile.owner !== null) {
-      newBoard.set(key, { ...tile, units: tile.units + 1 })
-      // Update stats
-      const stats = runningStats.get(tile.owner)
-      if (stats) {
-        runningStats.set(tile.owner, { ...stats, unitsGenerated: stats.unitsGenerated + 1 })
+      if (tile.newlyConquered) {
+        newBoard.set(key, { ...tile, newlyConquered: false })
+      } else {
+        newBoard.set(key, { ...tile, units: tile.units + 1 })
+        const stats = runningStats.get(tile.owner)
+        if (stats) {
+          runningStats.set(tile.owner, { ...stats, unitsGenerated: stats.unitsGenerated + 1 })
+        }
       }
     }
   }

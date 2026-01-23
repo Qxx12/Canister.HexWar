@@ -8,9 +8,10 @@ interface MovementArrowProps {
   board: Board
   hexSize: number
   isClamped: boolean
+  hollow?: boolean
 }
 
-export function MovementArrow({ order, board, hexSize, isClamped }: MovementArrowProps) {
+export function MovementArrow({ order, board, hexSize, isClamped, hollow = false }: MovementArrowProps) {
   const fromTile = board.get(order.fromKey)
   const toTile = board.get(order.toKey)
   if (!fromTile || !toTile) return null
@@ -46,7 +47,7 @@ export function MovementArrow({ order, board, hexSize, isClamped }: MovementArro
   const tipPoints = `${tipSize},0 ${-tipSize * 0.5},${tipSize * 0.6} ${-tipSize * 0.5},${-tipSize * 0.6}`
 
   return (
-    <g className={styles.arrow}>
+    <g className={styles.arrow} opacity={hollow ? 0.5 : 1}>
       <polygon
         points={tipPoints}
         fill={color}

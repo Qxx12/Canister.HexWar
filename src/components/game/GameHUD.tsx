@@ -16,6 +16,12 @@ export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating }: GameHUD
   const { phase, players, humanPlayerId, turn } = gameState
   const isPlayerTurn = phase === 'playerTurn' && !isAnimating
 
+  const activePlayerId = phase === 'playerTurn'
+    ? humanPlayerId
+    : phase === 'aiTurn'
+      ? players.filter(p => p.type === 'ai' && !p.isEliminated)[turn.activeAiIndex]?.id ?? null
+      : null
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !showRetireConfirm) setShowRetireConfirm(true)
@@ -32,7 +38,7 @@ export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating }: GameHUD
         <div className={styles.topBar}>
           <div className={styles.legend}>
             {players.filter(p => !p.isEliminated).map(p => (
-              <div key={p.id} className={styles.playerEntry}>
+              <div key={p.id} className={`${styles.playerEntry} ${p.id === activePlayerId ? styles.activeEntry : ''}`}>
                 <div className={styles.colorDot} style={{ background: p.color }} />
                 <span className={`${styles.playerName} ${p.id === humanPlayerId ? styles.you : ''}`}>
                   {p.name}{p.id === humanPlayerId ? ' (You)' : ''}

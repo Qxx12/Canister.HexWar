@@ -70,10 +70,12 @@ export function applyCombatResult(board: Board, result: CombatResult): Board {
     // Attacker takes the tile
     toTile.owner = result.attackingPlayerId
     toTile.units = result.remainingAttackers
+    toTile.newlyConquered = true
   } else if (result.defendingPlayerId === null || result.defendingPlayerId === result.attackingPlayerId) {
     // Move to friendly/unconquered tile
     toTile.owner = result.attackingPlayerId
     toTile.units = toTile.units + result.remainingAttackers
+    toTile.newlyConquered = false
   } else {
     // Failed attack - both sides take casualties
     toTile.units -= result.defenderCasualties

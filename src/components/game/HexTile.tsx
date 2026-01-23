@@ -31,8 +31,8 @@ export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestina
 
   const fillColor = TERRAIN_COLORS[tile.terrain] ?? '#d8d8d8'
 
-  const strokeColor = isValidDestination ? '#76e600' : '#b0b0b0'
-  const strokeWidth = isValidDestination ? 2 : 1
+  const strokeColor = '#b0b0b0'
+  const strokeWidth = 1
 
   const starOuter = hexSize * 0.12
   const starInner = hexSize * 0.05
@@ -46,7 +46,7 @@ export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestina
         fill={fillColor}
         stroke={strokeColor}
         strokeWidth={strokeWidth}
-        className={styles.hexPoly}
+        className={`${styles.hexPoly} ${isSelected ? styles.hexPolySelected : ''}`}
       />
       {tile.owner !== null && (
         <text

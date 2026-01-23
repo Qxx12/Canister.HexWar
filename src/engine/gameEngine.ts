@@ -44,11 +44,51 @@ export function initGame(): GameState {
     players,
     humanPlayerId: HUMAN_PLAYER_ID,
     orders,
+    humanStandingOrders: new Map(),
     turn: { turnNumber: 1, activeAiIndex: 0 },
     winner: null,
     stats: null,
     runningStats,
   }
+}
+
+export function setHumanStandingOrder(state: GameState, order: MovementOrder): GameState {
+  const newStanding = new Map(state.humanStandingOrders)
+  newStanding.set(order.fromKey, order)
+  return { ...state, humanStandingOrders: newStanding }
+}
+
+export function cancelHumanStandingOrder(state: GameState, fromKey: string): GameState {
+  const newStanding = new Map(state.humanStandingOrders)
+  newStanding.delete(fromKey)
+  return { ...state, humanStandingOrders: newStanding }
+}
+
+function cleanupStandingOrders(standing: OrderMap, board: Board, humanPlayerId: PlayerId): OrderMap {
+  const cleaned = new Map(standing)
+  for (const [fromKey] of cleaned) {
+    const tile = board.get(fromKey)
+    if (!tile || tile.owner !== humanPlayerId) cleaned.delete(fromKey)
+  }
+  return cleaned
+}
+
+function applyStandingOrdersToFreshOrders(
+  freshOrders: AllOrders,
+  standing: OrderMap,
+  board: Board,
+  humanPlayerId: PlayerId,
+): AllOrders {
+  const humanOrders = new Map<string, MovementOrder>()
+  for (const [fromKey, order] of standing) {
+    const tile = board.get(fromKey)
+    if (tile && tile.owner === humanPlayerId && tile.units > 0) {
+      humanOrders.set(fromKey, order)
+    }
+  }
+  const result = new Map(freshOrders)
+  result.set(humanPlayerId, humanOrders)
+  return result
 }
 
 export function applyHumanOrder(state: GameState, order: MovementOrder): GameState {
@@ -89,12 +129,14 @@ export function executeHumanMoves(state: GameState): {
     return buildEndState(state, result.board, result.players, result.runningStats, null, result.steps)
   }
 
+  const cleanedStanding = cleanupStandingOrders(state.humanStandingOrders, result.board, state.humanPlayerId)
   return {
     newState: {
       ...state,
       board: result.board,
       players: result.players,
       runningStats: result.runningStats,
+      humanStandingOrders: cleanedStanding,
       phase: 'playerTurn',
     },
     steps: result.steps,
@@ -115,14 +157,17 @@ export function resolveAiTurn(state: GameState, aiIndex: number): {
 } {
   const aiPlayers = state.players.filter(p => p.type === 'ai' && !p.isEliminated)
   if (aiIndex >= aiPlayers.length) {
-    // All AIs done - generate units and start next player turn with fresh orders
+    // All AIs done — generate units and start next player turn
     const updatedStats = new Map(state.runningStats)
     const newBoard = generateUnits(state.board, updatedStats)
+    const cleanedStanding = cleanupStandingOrders(state.humanStandingOrders, newBoard, state.humanPlayerId)
     const freshOrders: AllOrders = new Map(state.players.map(p => [p.id, new Map()]))
+    const ordersWithStanding = applyStandingOrdersToFreshOrders(freshOrders, cleanedStanding, newBoard, state.humanPlayerId)
     const nextState: GameState = {
       ...state,
       board: newBoard,
-      orders: freshOrders,
+      orders: ordersWithStanding,
+      humanStandingOrders: cleanedStanding,
       runningStats: updatedStats,
       phase: 'playerTurn',
       turn: { turnNumber: state.turn.turnNumber + 1, activeAiIndex: 0 },

@@ -99,6 +99,7 @@ export function generateBoard(playerIds: PlayerId[], rng: () => number = Math.ra
       isStartTile: false,
       startOwner: null,
       terrain: terrainFor(q, r),
+      newlyConquered: false,
     }
     board.set(key, tile)
   }

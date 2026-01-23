@@ -66,6 +66,15 @@ $hud-blur:      blur(10px);
   gap: $space-xs;
 }
 
+.activeEntry .playerName {
+  animation: bloom 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes bloom {
+  0%, 100% { text-shadow: 0 0 3px $hud-text, 0 0 6px $hud-text; }
+  50%       { text-shadow: 0 0 5px $hud-text, 0 0 10px $hud-text; }
+}
+
 .colorDot {
   width: 8px;
   height: 8px;

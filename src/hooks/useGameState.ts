@@ -6,6 +6,8 @@ import {
   initGame,
   applyHumanOrder,
   cancelHumanOrder,
+  setHumanStandingOrder,
+  cancelHumanStandingOrder,
   executeHumanMoves,
   endHumanTurn,
   resolveAiTurn,
@@ -16,6 +18,8 @@ type GameAction =
   | { type: 'START_GAME' }
   | { type: 'SET_ORDER'; order: MovementOrder }
   | { type: 'CANCEL_ORDER'; fromKey: string }
+  | { type: 'SET_STANDING_ORDER'; order: MovementOrder }
+  | { type: 'CANCEL_STANDING_ORDER'; fromKey: string }
   | { type: 'EXECUTE_HUMAN_MOVES'; onSteps: (steps: TurnStep[]) => void }
   | { type: 'END_HUMAN_TURN' }
   | { type: 'RESOLVE_AI'; aiIndex: number; onSteps: (steps: TurnStep[]) => void }
@@ -33,6 +37,10 @@ function gameReducer(state: GameState | null, action: GameAction): GameState | n
       return applyHumanOrder(state, action.order)
     case 'CANCEL_ORDER':
       return cancelHumanOrder(state, action.fromKey)
+    case 'SET_STANDING_ORDER':
+      return setHumanStandingOrder(state, action.order)
+    case 'CANCEL_STANDING_ORDER':
+      return cancelHumanStandingOrder(state, action.fromKey)
     case 'EXECUTE_HUMAN_MOVES': {
       const { newState, steps } = executeHumanMoves(state)
       action.onSteps(steps)
@@ -64,7 +72,9 @@ export function useGameState() {
   const endTurn = useCallback(() => dispatch({ type: 'END_HUMAN_TURN' }), [])
   const resolveAi = useCallback((aiIndex: number, onSteps: (s: TurnStep[]) => void) =>
     dispatch({ type: 'RESOLVE_AI', aiIndex, onSteps }), [])
+  const setStandingOrder = useCallback((order: MovementOrder) => dispatch({ type: 'SET_STANDING_ORDER', order }), [])
+  const cancelStandingOrder = useCallback((fromKey: string) => dispatch({ type: 'CANCEL_STANDING_ORDER', fromKey }), [])
   const retire = useCallback(() => dispatch({ type: 'RETIRE' }), [])
 
-  return { state, startGame, resetGame, setOrder, cancelOrder, executeHumanMovesAction, endTurn, resolveAi, retire }
+  return { state, startGame, resetGame, setOrder, cancelOrder, setStandingOrder, cancelStandingOrder, executeHumanMovesAction, endTurn, resolveAi, retire }
 }

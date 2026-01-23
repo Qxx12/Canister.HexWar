@@ -10,6 +10,10 @@
   transition: filter 0.1s ease;
 }
 
+.hexPolySelected {
+  filter: brightness(0.92);
+}
+
 .unitCount {
   font-family: $font-family;
   font-weight: $font-weight-bold;

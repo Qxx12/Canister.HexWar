@@ -21,6 +21,8 @@ interface GameBoardProps {
   onReady: (width: number, height: number) => void
   onSetOrder: (fromKey: string, toKey: string, units: number) => void
   onCancelOrder: (fromKey: string) => void
+  onSetStandingOrder: (fromKey: string, toKey: string, units: number) => void
+  onCancelStandingOrder: (fromKey: string) => void
 }
 
 const HEX_SIZE = 36
@@ -92,11 +94,13 @@ export function GameBoard({
   onReady,
   onSetOrder,
   onCancelOrder,
+  onSetStandingOrder,
+  onCancelStandingOrder,
 }: GameBoardProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [pendingOrder, setPendingOrder] = useState<{ fromKey: string; toKey: string } | null>(null)
 
-  const { board, players, humanPlayerId, orders, phase } = gameState
+  const { board, players, humanPlayerId, orders, humanStandingOrders, phase } = gameState
   const isPlayerTurn = phase === 'playerTurn'
 
   const playerIndex = useCallback((id: PlayerId) => {
@@ -162,10 +166,16 @@ export function GameBoard({
   const existingOrder = pendingOrder
     ? (humanOrders.get(pendingOrder.fromKey)?.requestedUnits ?? null)
     : null
+  const isStanding = pendingOrder ? humanStandingOrders.has(pendingOrder.fromKey) : false
 
-  const handleOrderConfirm = (units: number) => {
+  const handleOrderConfirm = (units: number, standing: boolean) => {
     if (pendingOrder) {
       onSetOrder(pendingOrder.fromKey, pendingOrder.toKey, units)
+      if (standing) {
+        onSetStandingOrder(pendingOrder.fromKey, pendingOrder.toKey, units)
+      } else {
+        onCancelStandingOrder(pendingOrder.fromKey)
+      }
       setPendingOrder(null)
     }
   }
@@ -173,6 +183,7 @@ export function GameBoard({
   const handleOrderCancel = () => {
     if (pendingOrder) {
       onCancelOrder(pendingOrder.fromKey)
+      onCancelStandingOrder(pendingOrder.fromKey)
       setPendingOrder(null)
     }
   }
@@ -228,9 +239,29 @@ export function GameBoard({
 
             <TerritoryBorders board={board} playerIndex={playerIndex} />
 
+            {Array.from(validDestinations).map(key => {
+              const tile = board.get(key)
+              if (!tile) return null
+              const { x: cx, y: cy } = axialToPixel(tile.coord, HEX_SIZE)
+              const corners = hexCorners(cx, cy, HEX_SIZE - 3)
+              const pts = corners.map(c => `${c.x},${c.y}`).join(' ')
+              return (
+                <polygon
+                  key={`dest-${key}`}
+                  points={pts}
+                  fill="none"
+                  stroke="#1db954"
+                  strokeWidth={2}
+                  strokeDasharray="8 3"
+                  pointerEvents="none"
+                />
+              )
+            })}
+
             {isPlayerTurn && Array.from(humanOrders.entries()).map(([fromKey, order]) => {
               const fromTileForArrow = board.get(fromKey)
               const isClamped = fromTileForArrow ? fromTileForArrow.units < order.requestedUnits : false
+              const hollow = humanStandingOrders.has(fromKey)
               return (
                 <MovementArrow
                   key={fromKey}
@@ -238,6 +269,7 @@ export function GameBoard({
                   board={board}
                   hexSize={HEX_SIZE}
                   isClamped={isClamped}
+                  hollow={hollow}
                 />
               )
             })}
@@ -258,6 +290,7 @@ export function GameBoard({
           toKey={pendingOrder.toKey}
           maxUnits={maxUnits}
           existingOrder={existingOrder}
+          isStanding={isStanding}
           onConfirm={handleOrderConfirm}
           onCancel={handleOrderCancel}
           onClose={() => setPendingOrder(null)}

@@ -12,12 +12,12 @@ export interface Player {
 
 // CivIV-inspired player colors: human + 5 AI
 export const PLAYER_COLORS: string[] = [
-  '#C0392B', // human - red
-  '#7D3C98', // AI 1 - purple
-  '#0d8c7a', // AI 2 - teal
-  '#E07898', // AI 3 - light pink (China)
-  '#D4882A', // AI 4 - amber (Aztec)
-  '#1A78C2', // AI 5 - Santorini blue
+  '#E84040', // human - red
+  '#A855F7', // AI 1 - purple
+  '#1ABC9C', // AI 2 - teal
+  '#F472B6', // AI 3 - pink (China)
+  '#F59E0B', // AI 4 - amber (Aztec)
+  '#3B9EFF', // AI 5 - blue (Greece)
 ]
 
 export const PLAYER_NAMES: string[] = [

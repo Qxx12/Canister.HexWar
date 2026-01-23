@@ -1,6 +1,6 @@
 import type { Board } from './board'
 import type { Player, PlayerId } from './player'
-import type { AllOrders } from './orders'
+import type { AllOrders, OrderMap } from './orders'
 import type { EndGameStats, PlayerStats } from './stats'
 
 export type GamePhase =
@@ -21,6 +21,7 @@ export interface GameState {
   players: Player[]
   humanPlayerId: PlayerId
   orders: AllOrders
+  humanStandingOrders: OrderMap
   turn: TurnState
   winner: PlayerId | null
   stats: EndGameStats | null

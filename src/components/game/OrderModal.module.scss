@@ -39,6 +39,20 @@
   }
 }
 
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-size-sm;
+  color: $color-text;
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    cursor: pointer;
+    accent-color: $color-accent;
+  }
+}
+
 .actions {
   display: flex;
   gap: $space-sm;

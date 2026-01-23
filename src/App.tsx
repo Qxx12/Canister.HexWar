@@ -16,7 +16,7 @@ type AppScreen = 'start' | 'game' | 'end'
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('start')
-  const { state, startGame, resetGame, setOrder, cancelOrder, executeHumanMovesAction, endTurn, resolveAi, retire } = useGameState()
+  const { state, startGame, resetGame, setOrder, cancelOrder, setStandingOrder, cancelStandingOrder, executeHumanMovesAction, endTurn, resolveAi, retire } = useGameState()
   const viewport = useViewport()
   const handleBoardReady = useCallback((w: number, h: number) => {
     viewport.centerBoard(w, h)
@@ -45,6 +45,16 @@ export default function App() {
     const order: MovementOrder = { fromKey, toKey, requestedUnits: units }
     setOrder(order)
   }, [state, setOrder])
+
+  const handleSetStandingOrder = useCallback((fromKey: string, toKey: string, units: number) => {
+    if (!state) return
+    const order: MovementOrder = { fromKey, toKey, requestedUnits: units }
+    setStandingOrder(order)
+  }, [state, setStandingOrder])
+
+  const handleCancelStandingOrder = useCallback((fromKey: string) => {
+    cancelStandingOrder(fromKey)
+  }, [cancelStandingOrder])
 
   // Build animation steps: each step shows the pre-move board, then updates to post-move board.
   const buildAnimationSteps = useCallback((steps: TurnStep[], boardBefore: Board): AnimationStep[] => {
@@ -80,9 +90,9 @@ export default function App() {
     setScreen('end')
   }, [retire])
 
-  // Process AI turns sequentially
+  // Process AI turns sequentially — wait for animation to finish before advancing
   useEffect(() => {
-    if (!state || state.phase !== 'aiTurn') return
+    if (!state || state.phase !== 'aiTurn' || isAnimating) return
     const aiPlayers = state.players.filter(p => p.type === 'ai' && !p.isEliminated)
     const aiIndex = state.turn.activeAiIndex
 
@@ -91,9 +101,9 @@ export default function App() {
       return
     }
 
-    setIsAnimating(true)
     const boardBefore = state.board
     const timer = setTimeout(() => {
+      setIsAnimating(true)
       resolveAi(aiIndex, (steps: TurnStep[]) => {
         const animSteps = buildAnimationSteps(steps, boardBefore)
         if (animSteps.length > 0) {
@@ -110,7 +120,7 @@ export default function App() {
 
     return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.phase, state?.turn.activeAiIndex])
+  }, [state?.phase, state?.turn.activeAiIndex, isAnimating])
 
   // Transition to end screen only after animations complete
   useEffect(() => {
@@ -151,6 +161,8 @@ export default function App() {
         onReady={handleBoardReady}
         onSetOrder={handleSetOrder}
         onCancelOrder={cancelOrder}
+        onSetStandingOrder={handleSetStandingOrder}
+        onCancelStandingOrder={handleCancelStandingOrder}
       />
       <GameHUD
         gameState={state}

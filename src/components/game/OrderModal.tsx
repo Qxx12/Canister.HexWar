@@ -8,20 +8,23 @@ interface OrderModalProps {
   toKey: string
   maxUnits: number
   existingOrder: number | null
-  onConfirm: (units: number) => void
+  isStanding: boolean
+  onConfirm: (units: number, standing: boolean) => void
   onCancel: () => void
   onClose: () => void
 }
 
-export function OrderModal({ fromKey: _fromKey, toKey: _toKey, maxUnits, existingOrder, onConfirm, onCancel, onClose }: OrderModalProps) {
+export function OrderModal({ fromKey: _fromKey, toKey: _toKey, maxUnits, existingOrder, isStanding, onConfirm, onCancel, onClose }: OrderModalProps) {
   const [units, setUnits] = useState(existingOrder ?? Math.max(1, maxUnits))
+  const [standing, setStanding] = useState(isStanding)
 
   useEffect(() => {
     setUnits(existingOrder ?? Math.max(1, maxUnits))
-  }, [existingOrder, maxUnits])
+    setStanding(isStanding)
+  }, [existingOrder, maxUnits, isStanding])
 
   const handleConfirm = () => {
-    if (units >= 1 && units <= maxUnits) onConfirm(units)
+    if (units >= 1 && units <= maxUnits) onConfirm(units, standing)
   }
 
   return (
@@ -42,6 +45,14 @@ export function OrderModal({ fromKey: _fromKey, toKey: _toKey, maxUnits, existin
             autoFocus
           />
         </div>
+        <label className={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            checked={standing}
+            onChange={e => setStanding(e.target.checked)}
+          />
+          <span>Repeat each turn</span>
+        </label>
         <div className={styles.actions}>
           <Button onClick={handleConfirm} variant="primary" disabled={units < 1 || units > maxUnits}>
             Confirm
