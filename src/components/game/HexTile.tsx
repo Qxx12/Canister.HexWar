@@ -12,6 +12,8 @@ interface HexTileProps {
   isSelected: boolean
   isValidDestination: boolean
   onClick: () => void
+  onMouseEnter: (tile: Tile) => void
+  onMouseLeave: () => void
 }
 
 function fourPointedStar(cx: number, cy: number, outer: number, inner: number): string {
@@ -24,7 +26,7 @@ function fourPointedStar(cx: number, cy: number, outer: number, inner: number): 
   return pts.join(' ')
 }
 
-export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestination, onClick }: HexTileProps) {
+export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestination, onClick, onMouseEnter, onMouseLeave }: HexTileProps) {
   const { x: cx, y: cy } = axialToPixel(tile.coord, hexSize)
   const corners = hexCorners(cx, cy, hexSize - 1) // -1 for gap
   const points = corners.map(c => `${c.x},${c.y}`).join(' ')
@@ -40,7 +42,7 @@ export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestina
   const starColor = tile.startOwner ? PLAYER_COLORS[playerIndex(tile.startOwner)] : '#666'
 
   return (
-    <g className={styles.hexGroup} onClick={onClick} style={{ cursor: 'pointer' }}>
+    <g className={styles.hexGroup} onClick={onClick} onMouseEnter={() => onMouseEnter(tile)} onMouseLeave={onMouseLeave} style={{ cursor: 'pointer' }}>
       <polygon
         points={points}
         fill={fillColor}

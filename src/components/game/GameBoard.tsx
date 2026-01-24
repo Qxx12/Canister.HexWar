@@ -1,11 +1,13 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import type { GameState } from '../../types/game'
 import type { AnimationEvent } from '../../types/animation'
 import type { PlayerId } from '../../types/player'
+import type { Tile } from '../../types/board'
 import { HexTile } from './HexTile'
 import { MovementArrow } from './MovementArrow'
 import { AnimationLayer } from './AnimationLayer'
 import { OrderModal } from './OrderModal'
+import { TileTooltip } from './TileTooltip'
 import { axialToPixel, hexCorners, hexNeighbors, hexToKey } from '../../types/hex'
 import { PLAYER_COLORS } from '../../types/player'
 import styles from './GameBoard.module.scss'
@@ -99,8 +101,47 @@ export function GameBoard({
 }: GameBoardProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [pendingOrder, setPendingOrder] = useState<{ fromKey: string; toKey: string } | null>(null)
+  const [tooltip, setTooltip] = useState<{ tile: Tile; x: number; y: number } | null>(null)
+  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingTileRef = useRef<Tile | null>(null)
+  const mousePosRef = useRef({ x: 0, y: 0 })
 
   const { board, players, humanPlayerId, orders, humanStandingOrders, phase } = gameState
+
+  const showTooltipAfterDelay = useCallback((tile: Tile) => {
+    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
+    pendingTileRef.current = tile
+    tooltipTimerRef.current = setTimeout(() => {
+      setTooltip({ tile: pendingTileRef.current!, ...mousePosRef.current })
+    }, 500)
+  }, [])
+
+  // Called on mouse leave: cancel everything
+  const hideTooltip = useCallback(() => {
+    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
+    pendingTileRef.current = null
+    setTooltip(null)
+  }, [])
+
+  // Called on mouse move within board: dismiss shown tooltip but restart timer if still over a tile
+  const resetTooltipOnMove = useCallback(() => {
+    setTooltip(null)
+    if (!pendingTileRef.current) return
+    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
+    tooltipTimerRef.current = setTimeout(() => {
+      if (pendingTileRef.current) {
+        setTooltip({ tile: pendingTileRef.current, ...mousePosRef.current })
+      }
+    }, 500)
+  }, [])
+
+  useEffect(() => {
+    if (!tooltip) return
+    const current = board.get(hexToKey(tooltip.tile.coord))
+    if (!current || current.units !== tooltip.tile.units || current.owner !== tooltip.tile.owner) {
+      hideTooltip()
+    }
+  }, [board, tooltip, hideTooltip])
   const isPlayerTurn = phase === 'playerTurn'
 
   const playerIndex = useCallback((id: PlayerId) => {
@@ -195,7 +236,7 @@ export function GameBoard({
       <div
         className={styles.boardContainer}
         onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
+        onPointerMove={e => { onPointerMove(e); mousePosRef.current = { x: e.clientX, y: e.clientY }; resetTooltipOnMove() }}
         onPointerUp={onPointerUp}
         onWheel={onWheel}
       >
@@ -232,6 +273,8 @@ export function GameBoard({
                     isSelected={selectedKey === key}
                     isValidDestination={validDestinations.has(key)}
                     onClick={() => handleTileClick(key)}
+                    onMouseEnter={showTooltipAfterDelay}
+                    onMouseLeave={hideTooltip}
                   />
                 )
               })}
@@ -283,6 +326,15 @@ export function GameBoard({
           </svg>
         </div>
       </div>
+
+      {tooltip && !pendingOrder && (
+        <TileTooltip
+          tile={tooltip.tile}
+          players={players}
+          x={tooltip.x}
+          y={tooltip.y}
+        />
+      )}
 
       {pendingOrder && fromTile && maxUnits > 0 && (
         <OrderModal
