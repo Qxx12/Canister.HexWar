@@ -9,19 +9,31 @@ export interface ViewportState {
 const MIN_ZOOM = 0.4
 const MAX_ZOOM = 2.5
 const DRAG_THRESHOLD = 6
+// Minimum pixels of board that must remain visible inside the viewport
+const PAN_MARGIN = 120
 
 function clampZoom(z: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z))
 }
 
-function zoomToward(v: ViewportState, newZoom: number, cx: number, cy: number): ViewportState {
+function clampPan(panX: number, panY: number, zoom: number, boardW: number, boardH: number): { panX: number; panY: number } {
+  const scaledW = boardW * zoom
+  const scaledH = boardH * zoom
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  return {
+    panX: Math.min(vw - PAN_MARGIN, Math.max(PAN_MARGIN - scaledW, panX)),
+    panY: Math.min(vh - PAN_MARGIN, Math.max(PAN_MARGIN - scaledH, panY)),
+  }
+}
+
+function zoomToward(v: ViewportState, newZoom: number, cx: number, cy: number, boardW: number, boardH: number): ViewportState {
   const clamped = clampZoom(newZoom)
   const factor = clamped / v.zoom
-  return {
-    zoom: clamped,
-    panX: cx - factor * (cx - v.panX),
-    panY: cy - factor * (cy - v.panY),
-  }
+  const panX = cx - factor * (cx - v.panX)
+  const panY = cy - factor * (cy - v.panY)
+  const { panX: cpx, panY: cpy } = clampPan(panX, panY, clamped, boardW, boardH)
+  return { zoom: clamped, panX: cpx, panY: cpy }
 }
 
 export function useViewport() {
@@ -30,6 +42,7 @@ export function useViewport() {
   const lastPos = useRef({ x: 0, y: 0 })
   const startPos = useRef({ x: 0, y: 0 })
   const pendingCapture = useRef<{ pointerId: number; target: Element } | null>(null)
+  const boardSize = useRef({ w: 0, h: 0 })
 
   // Multi-touch pinch tracking
   const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map())
@@ -37,6 +50,7 @@ export function useViewport() {
   const lastPinchMid = useRef<{ x: number; y: number } | null>(null)
 
   const centerBoard = useCallback((boardW: number, boardH: number) => {
+    boardSize.current = { w: boardW, h: boardH }
     setViewport({
       zoom: 1,
       panX: (window.innerWidth - boardW) / 2,
@@ -53,7 +67,8 @@ export function useViewport() {
     const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2
     const cx = window.innerWidth / 2
     const cy = window.innerHeight / 2
-    setViewport(v => zoomToward(v, v.zoom * factor, cx, cy))
+    const { w, h } = boardSize.current
+    setViewport(v => zoomToward(v, v.zoom * factor, cx, cy, w, h))
   }, [])
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
@@ -94,13 +109,11 @@ export function useViewport() {
         const prevMid = lastPinchMid.current
         const cx = window.innerWidth / 2
         const cy = window.innerHeight / 2
+        const { w, h } = boardSize.current
         setViewport(v => {
-          const zoomed = zoomToward(v, v.zoom * factor, cx, cy)
-          return {
-            ...zoomed,
-            panX: zoomed.panX + (mid.x - prevMid.x),
-            panY: zoomed.panY + (mid.y - prevMid.y),
-          }
+          const zoomed = zoomToward(v, v.zoom * factor, cx, cy, w, h)
+          const { panX, panY } = clampPan(zoomed.panX + (mid.x - prevMid.x), zoomed.panY + (mid.y - prevMid.y), zoomed.zoom, w, h)
+          return { ...zoomed, panX, panY }
         })
       }
 
@@ -125,7 +138,11 @@ export function useViewport() {
     if (isPanning.current) {
       const moveDx = e.clientX - lastPos.current.x
       const moveDy = e.clientY - lastPos.current.y
-      setViewport(v => ({ ...v, panX: v.panX + moveDx, panY: v.panY + moveDy }))
+      const { w, h } = boardSize.current
+      setViewport(v => {
+        const { panX, panY } = clampPan(v.panX + moveDx, v.panY + moveDy, v.zoom, w, h)
+        return { ...v, panX, panY }
+      })
     }
 
     lastPos.current = { x: e.clientX, y: e.clientY }

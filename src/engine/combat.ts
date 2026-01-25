@@ -75,7 +75,7 @@ export function applyCombatResult(board: Board, result: CombatResult): Board {
     // Move to friendly/unconquered tile
     toTile.owner = result.attackingPlayerId
     toTile.units = toTile.units + result.remainingAttackers
-    toTile.newlyConquered = false
+    // Don't reset newlyConquered — a tile may have been conquered by an earlier order this same turn
   } else {
     // Failed attack - both sides take casualties
     toTile.units -= result.defenderCasualties
