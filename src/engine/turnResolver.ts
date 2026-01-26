@@ -32,6 +32,7 @@ export function resolvePlayerTurn(
   runningStats: Map<PlayerId, PlayerStats>,
 ): TurnResolutionResult {
   let currentBoard = new Map(board)
+  const initialBoard = new Map(board) // snapshot: unit counts at start of turn
   let currentPlayers = [...players]
   const animationEvents: AnimationEvent[] = []
   const steps: TurnStep[] = []
@@ -47,7 +48,11 @@ export function resolvePlayerTurn(
     const neighbors = hexNeighbors(fromTile.coord).map(hexToKey)
     if (!neighbors.includes(order.toKey)) continue
 
-    const result = resolveCombat(currentBoard, order, playerId)
+    // Only units present at the start of the turn can be ordered — prevents chaining
+    const initialUnits = initialBoard.get(fromKey)?.units ?? 0
+    const cappedOrder = { ...order, requestedUnits: Math.min(order.requestedUnits, initialUnits) }
+
+    const result = resolveCombat(currentBoard, cappedOrder, playerId)
     if (result.unitsSent === 0) continue
 
     if (result.defenderCasualties > 0 && result.defendingPlayerId) {

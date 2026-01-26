@@ -303,7 +303,9 @@ export function GameBoard({
 
             {isPlayerTurn && Array.from(humanOrders.entries()).map(([fromKey, order]) => {
               const fromTileForArrow = board.get(fromKey)
-              const isClamped = fromTileForArrow ? fromTileForArrow.units < order.requestedUnits : false
+              const isClamped = fromTileForArrow
+                ? order.requestedUnits !== Infinity && fromTileForArrow.units < order.requestedUnits
+                : false
               const hollow = humanStandingOrders.has(fromKey)
               return (
                 <MovementArrow

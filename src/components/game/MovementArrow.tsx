@@ -68,7 +68,7 @@ export function MovementArrow({ order, board, hexSize, isClamped, hollow = false
         paintOrder="stroke fill"
         fontSize={hexSize * 0.28}
       >
-        {order.requestedUnits}
+        {order.requestedUnits === Infinity ? fromTile.units : order.requestedUnits}
       </text>
     </g>
   )

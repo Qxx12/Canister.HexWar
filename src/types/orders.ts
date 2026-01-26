@@ -1,5 +1,8 @@
 import type { PlayerId } from './player'
 
+// Sentinel: move all units currently on the tile (only valid for standing orders)
+export const UNITS_ALL = Infinity
+
 export interface MovementOrder {
   fromKey: string
   toKey: string

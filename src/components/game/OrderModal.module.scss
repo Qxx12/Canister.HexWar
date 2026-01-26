@@ -7,35 +7,88 @@
   gap: $space-md;
 }
 
-.info {
-  color: $color-text-muted;
-  font-size: $font-size-sm;
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  width: 100%;
 }
 
-.inputRow {
+.stepBtn {
+  width: 2rem;
+  height: 2rem;
+  background: #c8bfb0;
+  border: 1px solid #a89880;
+  color: $color-text;
+  font-size: 1.1rem;
+  font-family: $font-family;
+  cursor: pointer;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-bottom: 2px;
+
+  &:hover:not(:disabled) {
+    background: #b8af9e;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.stepValue {
+  flex: 1;
+  min-width: 3.2rem;
+  text-align: center;
+  font-size: $font-size-base;
+  font-weight: 600;
+  color: $color-text;
+  background: #c8bfb0;
+  border: 1px solid #a89880;
+  height: 2rem;
+  line-height: 2rem;
+}
+
+.presets {
+  display: flex;
   gap: $space-xs;
 }
 
-.label {
-  font-size: $font-size-sm;
-  color: $color-text-muted;
-}
-
-.input {
+.presetBtn {
+  flex: 1;
+  height: 2rem;
+  padding: 0;
   background: #c8bfb0;
   border: 1px solid #a89880;
-  border-radius: 0;
-  color: $color-text;
-  font-size: $font-size-base;
+  color: $color-text-muted;
+  font-size: $font-size-sm;
   font-family: $font-family;
-  padding: $space-xs $space-sm;
-  width: 100%;
+  cursor: pointer;
 
-  &:focus {
-    border-color: #7a6848;
-    outline: none;
+  &:hover:not(:disabled) {
+    background: #b8af9e;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.presetBtnInfinity {
+  font-size: 1.1rem;
+}
+
+.presetBtnActive {
+  background: #7a6848;
+  border-color: #5a4828;
+  color: #fff8f0;
+
+  &:hover {
+    background: #6a5838;
   }
 }
 

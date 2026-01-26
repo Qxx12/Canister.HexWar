@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Modal } from '../shared/Modal'
 import { Button } from '../shared/Button'
+import { UNITS_ALL } from '../../types/orders'
 import styles from './OrderModal.module.scss'
 
 interface OrderModalProps {
@@ -15,36 +16,63 @@ interface OrderModalProps {
 }
 
 export function OrderModal({ fromKey: _fromKey, toKey: _toKey, maxUnits, existingOrder, isStanding, onConfirm, onCancel, onClose }: OrderModalProps) {
-  const [units, setUnits] = useState(existingOrder ?? Math.max(1, maxUnits))
+  const isExistingAll = existingOrder === UNITS_ALL
+  const [units, setUnits] = useState(Math.min(Math.max(1, isExistingAll ? maxUnits : (existingOrder ?? maxUnits)), maxUnits))
   const [standing, setStanding] = useState(isStanding)
+  const [allUnits, setAllUnits] = useState(isExistingAll)
 
   useEffect(() => {
-    setUnits(existingOrder ?? Math.max(1, maxUnits))
+    const existingAll = existingOrder === UNITS_ALL
+    setUnits(Math.min(Math.max(1, existingAll ? maxUnits : (existingOrder ?? maxUnits)), maxUnits))
     setStanding(isStanding)
+    setAllUnits(existingAll)
   }, [existingOrder, maxUnits, isStanding])
 
+  const adjust = (delta: number) =>
+    setUnits(u => Math.min(maxUnits, Math.max(1, u + delta)))
+
   const handleConfirm = () => {
-    if (units >= 1 && units <= maxUnits) onConfirm(units, standing)
+    const finalUnits = standing && allUnits ? UNITS_ALL : units
+    if (finalUnits === UNITS_ALL || (finalUnits >= 1 && finalUnits <= maxUnits)) {
+      onConfirm(finalUnits, standing)
+    }
   }
+
+  const stepperDisabled = standing && allUnits
 
   return (
     <Modal title="Move Units" onClose={onClose}>
       <div className={styles.content}>
-        <p className={styles.info}>
-          Moving from tile to adjacent tile.
-        </p>
-        <div className={styles.inputRow}>
-          <label className={styles.label}>Units to move (max {maxUnits})</label>
-          <input
-            type="number"
-            className={styles.input}
-            value={units}
-            min={1}
-            max={maxUnits}
-            onChange={e => setUnits(Math.min(maxUnits, Math.max(1, parseInt(e.target.value) || 1)))}
-            autoFocus
-          />
+        <div className={styles.stepper}>
+          <span className={styles.stepValue}>
+            {stepperDisabled ? '∞' : units}
+          </span>
+          <button
+            className={styles.stepBtn}
+            onClick={() => adjust(-1)}
+            disabled={stepperDisabled || units <= 1}
+          >−</button>
+          <button
+            className={styles.stepBtn}
+            onClick={() => adjust(1)}
+            disabled={stepperDisabled || units >= maxUnits}
+          >+</button>
         </div>
+
+        <div className={styles.presets}>
+          <button
+            className={styles.presetBtn}
+            onClick={() => setUnits(maxUnits)}
+            disabled={stepperDisabled || units === maxUnits}
+          >Max</button>
+          {standing && (
+            <button
+              className={`${styles.presetBtn} ${styles.presetBtnInfinity} ${allUnits ? styles.presetBtnActive : ''}`}
+              onClick={() => setAllUnits(a => !a)}
+            >∞</button>
+          )}
+        </div>
+
         <label className={styles.checkboxRow}>
           <input
             type="checkbox"
@@ -53,8 +81,9 @@ export function OrderModal({ fromKey: _fromKey, toKey: _toKey, maxUnits, existin
           />
           <span>Repeat each turn</span>
         </label>
+
         <div className={styles.actions}>
-          <Button onClick={handleConfirm} variant="primary" disabled={units < 1 || units > maxUnits}>
+          <Button onClick={handleConfirm} variant="primary">
             Confirm
           </Button>
           {existingOrder !== null && (
