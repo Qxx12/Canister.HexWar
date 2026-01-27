@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import type { AnimationEvent } from '../../types/animation'
 import type { Board } from '../../types/board'
 import { axialToPixel } from '../../types/hex'
@@ -15,9 +15,12 @@ interface AnimationLayerProps {
 export function AnimationLayer({ activeEvent, board, hexSize, playerIndex }: AnimationLayerProps) {
   const [progress, setProgress] = useState(0)
 
+  useLayoutEffect(() => {
+    setProgress(0)
+  }, [activeEvent])
+
   useEffect(() => {
     if (!activeEvent) return
-    setProgress(0)
     const start = performance.now()
     let rafId: number
 
