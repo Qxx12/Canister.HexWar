@@ -68,12 +68,14 @@ export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating }: GameHUD
       </div>
 
       {showRetireConfirm && (
-        <Modal title="Menu" onClose={() => setShowRetireConfirm(false)}>
+        <Modal title="Menu" onClose={() => setShowRetireConfirm(false)} maxWidth={340}>
           <div className={styles.menuContent}>
             <p>Do you want to retire and return to the start screen?</p>
             <div className={styles.menuActions}>
               <Button onClick={onRetire} variant="danger">Retire</Button>
-              <Button onClick={() => setShowRetireConfirm(false)} variant="secondary">Continue</Button>
+              <span style={{ marginLeft: 'auto' }}>
+                <Button onClick={() => setShowRetireConfirm(false)} variant="secondary">Continue</Button>
+              </span>
             </div>
           </div>
         </Modal>

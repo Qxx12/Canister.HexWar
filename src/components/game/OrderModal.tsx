@@ -41,7 +41,7 @@ export function OrderModal({ fromKey: _fromKey, toKey: _toKey, maxUnits, existin
   const stepperDisabled = standing && allUnits
 
   return (
-    <Modal title="Move Units" onClose={onClose}>
+    <Modal title="Move Units" onClose={onClose} maxWidth={300}>
       <div className={styles.content}>
         <div className={styles.stepper}>
           <span className={styles.stepValue}>
@@ -83,17 +83,13 @@ export function OrderModal({ fromKey: _fromKey, toKey: _toKey, maxUnits, existin
         </label>
 
         <div className={styles.actions}>
-          <Button onClick={handleConfirm} variant="primary">
-            Confirm
-          </Button>
-          {existingOrder !== null && (
-            <Button onClick={onCancel} variant="danger">
-              Cancel Order
-            </Button>
-          )}
-          <Button onClick={onClose} variant="secondary">
-            Close
-          </Button>
+          <Button onClick={onClose} variant="secondary">Close</Button>
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+            {existingOrder !== null && (
+              <Button onClick={onCancel} variant="danger">Cancel</Button>
+            )}
+            <Button onClick={handleConfirm} variant="primary">Confirm</Button>
+          </span>
         </div>
       </div>
     </Modal>
