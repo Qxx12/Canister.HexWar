@@ -9,17 +9,18 @@ interface GameHUDProps {
   onEndTurn: () => void
   onRetire: () => void
   isAnimating: boolean
+  animatingPlayerId: string | null
 }
 
-export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating }: GameHUDProps) {
+export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating, animatingPlayerId }: GameHUDProps) {
   const [showRetireConfirm, setShowRetireConfirm] = useState(false)
   const { phase, players, humanPlayerId, turn } = gameState
   const isPlayerTurn = phase === 'playerTurn' && !isAnimating
 
-  const activePlayerId = phase === 'playerTurn'
-    ? humanPlayerId
-    : phase === 'aiTurn'
-      ? players.filter(p => p.type === 'ai' && !p.isEliminated)[turn.activeAiIndex]?.id ?? null
+  const activePlayerId = isAnimating
+    ? animatingPlayerId
+    : phase === 'playerTurn'
+      ? humanPlayerId
       : null
 
   useEffect(() => {

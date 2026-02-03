@@ -169,6 +169,7 @@ export default function App() {
         onEndTurn={handleEndTurn}
         onRetire={handleRetire}
         isAnimating={isAnimating}
+        animatingPlayerId={activeEvent?.playerId ?? null}
       />
     </div>
   )
