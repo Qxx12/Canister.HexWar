@@ -50,6 +50,33 @@ function isConnected(tileKeys: Set<string>): boolean {
   return visited.size === tileKeys.size
 }
 
+function punchHoles(tileKeys: Set<string>, rng: () => number): Set<string> {
+  const result = new Set(tileKeys)
+  const targetRemove = Math.floor(result.size * 0.22)
+
+  // Score each tile: layered positional noise + rng jitter → natural clustered holes
+  const scored = Array.from(result).map(key => {
+    const [q, r] = key.split(',').map(Number)
+    const noise =
+      Math.sin(q * 1.3) * Math.cos(r * 1.1) +
+      Math.sin((q + r) * 0.9) * 0.6 +
+      Math.cos(q * 0.7 - r * 1.5) * 0.4
+    return { key, score: noise + rng() * 0.8 }
+  }).sort((a, b) => b.score - a.score)
+
+  let removed = 0
+  for (const { key } of scored) {
+    if (removed >= targetRemove) break
+    result.delete(key)
+    if (!isConnected(result)) {
+      result.add(key) // restore if it disconnects the map
+    } else {
+      removed++
+    }
+  }
+  return result
+}
+
 function placeStartTiles(tileKeys: string[], playerIds: PlayerId[], rng: () => number): string[] {
   const count = playerIds.length
   // Try many random candidate sets, pick best by minimum pairwise distance
@@ -87,7 +114,7 @@ function terrainFor(q: number, r: number): TerrainType {
 }
 
 export function generateBoard(playerIds: PlayerId[], rng: () => number = Math.random): Board {
-  const tileKeys = generateBlob(rng)
+  const tileKeys = punchHoles(generateBlob(rng), rng)
   const board: Board = new Map()
 
   for (const key of tileKeys) {
