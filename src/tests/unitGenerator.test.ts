@@ -14,8 +14,8 @@ function makeBoard(tiles: Tile[]): Board {
 describe('generateUnits', () => {
   it('generates 1 unit per owned tile', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 3, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p1', units: 2, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 3, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const stats = new Map<string, PlayerStats>([
       ['p0', { playerId: 'p0', unitsGenerated: 0, unitsKilled: 0, tilesConquered: 0, tilesLost: 0, tilesAtEnd: 0 }],
@@ -28,7 +28,7 @@ describe('generateUnits', () => {
 
   it('does not generate units for unconquered tiles', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const stats = new Map()
     const newBoard = generateUnits(board, stats)

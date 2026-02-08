@@ -19,24 +19,24 @@ const players: Player[] = [
 describe('checkWin', () => {
   it('returns null when no one has won', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0' },
-      { coord: { q: 5, r: 0 }, owner: 'p1', units: 3, isStartTile: true, startOwner: 'p1' },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0', terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 5, r: 0 }, owner: 'p1', units: 3, isStartTile: true, startOwner: 'p1', terrain: 'plains' as const, newlyConquered: false },
     ])
     expect(checkWin(board, players)).toBeNull()
   })
 
   it('returns winner when player owns all start tiles including their own', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0' },
-      { coord: { q: 5, r: 0 }, owner: 'p0', units: 3, isStartTile: true, startOwner: 'p1' },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0', terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 5, r: 0 }, owner: 'p0', units: 3, isStartTile: true, startOwner: 'p1', terrain: 'plains' as const, newlyConquered: false },
     ])
     expect(checkWin(board, players)).toBe('p0')
   })
 
   it('does not declare win if player lost their own start tile', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p1', units: 5, isStartTile: true, startOwner: 'p0' },
-      { coord: { q: 5, r: 0 }, owner: 'p0', units: 3, isStartTile: true, startOwner: 'p1' },
+      { coord: { q: 0, r: 0 }, owner: 'p1', units: 5, isStartTile: true, startOwner: 'p0', terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 5, r: 0 }, owner: 'p0', units: 3, isStartTile: true, startOwner: 'p1', terrain: 'plains' as const, newlyConquered: false },
     ])
     expect(checkWin(board, players)).toBeNull()
   })
@@ -45,15 +45,15 @@ describe('checkWin', () => {
 describe('checkEliminations', () => {
   it('returns player with no tiles', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0' },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0', terrain: 'plains' as const, newlyConquered: false },
     ])
     expect(checkEliminations(board, players)).toContain('p1')
   })
 
   it('returns empty when all players have tiles', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0' },
-      { coord: { q: 5, r: 0 }, owner: 'p1', units: 3, isStartTile: true, startOwner: 'p1' },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0', terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 5, r: 0 }, owner: 'p1', units: 3, isStartTile: true, startOwner: 'p1', terrain: 'plains' as const, newlyConquered: false },
     ])
     expect(checkEliminations(board, players)).toHaveLength(0)
   })

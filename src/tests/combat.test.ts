@@ -13,8 +13,8 @@ function makeBoard(tiles: Tile[]): Board {
 describe('resolveCombat', () => {
   it('moves to friendly tile without casualties', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 3 }, 'p0')
     expect(result.attackerCasualties).toBe(0)
@@ -25,8 +25,8 @@ describe('resolveCombat', () => {
 
   it('conquers unconquered tile without casualties', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 3 }, 'p0')
     expect(result.conquered).toBe(true)
@@ -36,8 +36,8 @@ describe('resolveCombat', () => {
 
   it('combat: attacker wins when sending more units', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p1', units: 3, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 3, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 5 }, 'p0')
     expect(result.conquered).toBe(true)
@@ -48,8 +48,8 @@ describe('resolveCombat', () => {
 
   it('combat: attacker loses when sending fewer units', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 2 }, 'p0')
     expect(result.conquered).toBe(false)
@@ -58,8 +58,8 @@ describe('resolveCombat', () => {
 
   it('combat: tie - attacker loses', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 3, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p1', units: 3, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 3, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 3, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 3 }, 'p0')
     expect(result.conquered).toBe(false)
@@ -68,8 +68,8 @@ describe('resolveCombat', () => {
 
   it('clamps units to available', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 10 }, 'p0')
     expect(result.unitsSent).toBe(2)
@@ -80,8 +80,8 @@ describe('resolveCombat', () => {
 describe('applyCombatResult', () => {
   it('moves units to friendly tile', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 3 }, 'p0')
     const newBoard = applyCombatResult(board, result)
@@ -91,8 +91,8 @@ describe('applyCombatResult', () => {
 
   it('conquers hostile tile', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p1', units: 3, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 3, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 5 }, 'p0')
     const newBoard = applyCombatResult(board, result)

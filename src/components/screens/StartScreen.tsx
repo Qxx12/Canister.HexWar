@@ -55,6 +55,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
             ▶
           </button>
         </div>
+        <p className={styles.copyright}>© {new Date().getFullYear()} nonaction.net</p>
       </div>
     </div>
   )

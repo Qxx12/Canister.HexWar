@@ -28,8 +28,8 @@ function makeStats(): Map<string, PlayerStats> {
 describe('resolvePlayerTurn', () => {
   it('moves units to adjacent friendly tile', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders: OrderMap = new Map([
       ['0,0', { fromKey: '0,0', toKey: '1,0', requestedUnits: 3 }],
@@ -43,8 +43,8 @@ describe('resolvePlayerTurn', () => {
 
   it('conquers hostile tile', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p1', units: 2, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders: OrderMap = new Map([
       ['0,0', { fromKey: '0,0', toKey: '1,0', requestedUnits: 5 }],
@@ -56,8 +56,8 @@ describe('resolvePlayerTurn', () => {
 
   it('detects win when all start tiles captured', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0' },
-      { coord: { q: 1, r: 0 }, owner: 'p1', units: 2, isStartTile: true, startOwner: 'p1' },
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: true, startOwner: 'p0', terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 2, isStartTile: true, startOwner: 'p1', terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders: OrderMap = new Map([
       ['0,0', { fromKey: '0,0', toKey: '1,0', requestedUnits: 5 }],
@@ -68,8 +68,8 @@ describe('resolvePlayerTurn', () => {
 
   it('skips order if tile not owned by player', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders: OrderMap = new Map([
       ['0,0', { fromKey: '0,0', toKey: '1,0', requestedUnits: 3 }],

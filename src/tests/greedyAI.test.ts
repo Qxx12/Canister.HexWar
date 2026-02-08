@@ -21,7 +21,7 @@ const ai = new GreedyAI()
 describe('GreedyAI', () => {
   it('issues no order when no valid neighbors', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders = ai.computeOrders(board, 'p1', new Map(), players)
     expect(orders.size).toBe(0)
@@ -29,9 +29,9 @@ describe('GreedyAI', () => {
 
   it('prefers unconquered tile over friendly', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p1', units: 3, isStartTile: false, startOwner: null },
-      { coord: { q: 0, r: 1 }, owner: null, units: 0, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 3, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 0, r: 1 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders = ai.computeOrders(board, 'p1', new Map(), players)
     const order = orders.get('0,0')
@@ -41,9 +41,9 @@ describe('GreedyAI', () => {
 
   it('prefers hostile start tile over unconquered', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p1', units: 10, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: 'p0', units: 3, isStartTile: true, startOwner: 'p0' },
-      { coord: { q: 0, r: 1 }, owner: null, units: 0, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p1', units: 10, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p0', units: 3, isStartTile: true, startOwner: 'p0', terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 0, r: 1 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders = ai.computeOrders(board, 'p1', new Map(), players)
     const order = orders.get('0,0')
@@ -52,8 +52,8 @@ describe('GreedyAI', () => {
 
   it('sends 80% of units (floored)', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p1', units: 10, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p1', units: 10, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders = ai.computeOrders(board, 'p1', new Map(), players)
     expect(orders.get('0,0')!.requestedUnits).toBe(8)
@@ -61,8 +61,8 @@ describe('GreedyAI', () => {
 
   it('sends minimum 1 unit when tile has 1 unit', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p1', units: 1, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p1', units: 1, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders = ai.computeOrders(board, 'p1', new Map(), players)
     expect(orders.get('0,0')!.requestedUnits).toBe(1)
@@ -70,8 +70,8 @@ describe('GreedyAI', () => {
 
   it('does not issue order for tiles with 0 units', () => {
     const board = makeBoard([
-      { coord: { q: 0, r: 0 }, owner: 'p1', units: 0, isStartTile: false, startOwner: null },
-      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null },
+      { coord: { q: 0, r: 0 }, owner: 'p1', units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
     ])
     const orders = ai.computeOrders(board, 'p1', new Map(), players)
     expect(orders.size).toBe(0)

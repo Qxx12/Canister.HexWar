@@ -26,7 +26,7 @@ function fourPointedStar(cx: number, cy: number, outer: number, inner: number): 
   return pts.join(' ')
 }
 
-export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestination, onClick, onMouseEnter, onMouseLeave }: HexTileProps) {
+export function HexTile({ tile, hexSize, playerIndex, isSelected, isValidDestination: _isValidDestination, onClick, onMouseEnter, onMouseLeave }: HexTileProps) {
   const { x: cx, y: cy } = axialToPixel(tile.coord, hexSize)
   const corners = hexCorners(cx, cy, hexSize - 1) // -1 for gap
   const points = corners.map(c => `${c.x},${c.y}`).join(' ')

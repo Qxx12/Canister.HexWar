@@ -1,7 +1,7 @@
 import type { GameState } from '../types/game'
 import type { Player, PlayerId } from '../types/player'
 import type { Board } from '../types/board'
-import type { MovementOrder, AllOrders } from '../types/orders'
+import type { MovementOrder, OrderMap, AllOrders } from '../types/orders'
 import type { PlayerStats, EndGameStats } from '../types/stats'
 import type { TurnStep } from './turnResolver'
 import { generateBoard } from './boardGenerator'
@@ -66,7 +66,7 @@ export function cancelHumanStandingOrder(state: GameState, fromKey: string): Gam
 
 function cleanupStandingOrders(standing: OrderMap, board: Board, humanPlayerId: PlayerId): OrderMap {
   const cleaned = new Map(standing)
-  for (const [fromKey] of cleaned) {
+  for (const [fromKey] of Array.from(cleaned)) {
     const tile = board.get(fromKey)
     if (!tile || tile.owner !== humanPlayerId) cleaned.delete(fromKey)
   }
