@@ -6,14 +6,16 @@ import styles from './MovementArrow.module.scss'
 interface MovementArrowProps {
   order: MovementOrder
   board: Board
+  arrowBoard: Board
   hexSize: number
   isClamped: boolean
   hollow?: boolean
 }
 
-export function MovementArrow({ order, board, hexSize, isClamped, hollow = false }: MovementArrowProps) {
+export function MovementArrow({ order, board, arrowBoard, hexSize, isClamped, hollow = false }: MovementArrowProps) {
   const fromTile = board.get(order.fromKey)
   const toTile = board.get(order.toKey)
+  const arrowFromTile = arrowBoard.get(order.fromKey)
   if (!fromTile || !toTile) return null
 
   const from = axialToPixel(fromTile.coord, hexSize)
@@ -68,7 +70,7 @@ export function MovementArrow({ order, board, hexSize, isClamped, hollow = false
         paintOrder="stroke fill"
         fontSize={hexSize * 0.28}
       >
-        {order.requestedUnits === Infinity ? fromTile.units : order.requestedUnits}
+        {order.requestedUnits === Infinity ? (arrowFromTile?.units ?? fromTile.units) : order.requestedUnits}
       </text>
     </g>
   )

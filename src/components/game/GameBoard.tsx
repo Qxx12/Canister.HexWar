@@ -15,6 +15,7 @@ import styles from './GameBoard.module.scss'
 interface GameBoardProps {
   gameState: GameState
   activeAnimation: AnimationEvent | null
+  arrowBoard: Board
   viewport: { zoom: number; panX: number; panY: number }
   onPointerDown: (e: React.PointerEvent) => void
   onPointerMove: (e: React.PointerEvent) => void
@@ -88,6 +89,7 @@ function TerritoryBorders({ board, playerIndex }: { board: Board; playerIndex: (
 export function GameBoard({
   gameState,
   activeAnimation,
+  arrowBoard,
   viewport,
   onPointerDown,
   onPointerMove,
@@ -302,7 +304,7 @@ export function GameBoard({
             })}
 
             {isPlayerTurn && Array.from(humanOrders.entries()).map(([fromKey, order]) => {
-              const fromTileForArrow = board.get(fromKey)
+              const fromTileForArrow = arrowBoard.get(fromKey)
               const isClamped = fromTileForArrow
                 ? order.requestedUnits !== Infinity && fromTileForArrow.units < order.requestedUnits
                 : false
@@ -312,6 +314,7 @@ export function GameBoard({
                   key={fromKey}
                   order={order}
                   board={board}
+                  arrowBoard={arrowBoard}
                   hexSize={HEX_SIZE}
                   isClamped={isClamped}
                   hollow={hollow}

@@ -27,6 +27,7 @@ export default function App() {
   // Display board lags behind state.board — updated one step at a time as animations play.
   // state.board (logic board) is always fully resolved and used by the engine.
   const [displayBoard, setDisplayBoard] = useState<Board | null>(null)
+  const [snapshotBoard, setSnapshotBoard] = useState<Board | null>(null)
 
   const handleStartGame = useCallback(() => {
     startGame()
@@ -37,6 +38,7 @@ export default function App() {
     resetGame()
     clearQueue()
     setDisplayBoard(null)
+    setSnapshotBoard(null)
     setScreen('start')
   }, [resetGame, clearQueue])
 
@@ -68,17 +70,20 @@ export default function App() {
   const handleEndTurn = useCallback(() => {
     if (!state) return
     const boardBefore = state.board
+    setSnapshotBoard(boardBefore)
     setIsAnimating(true)
     executeHumanMovesAction((steps: TurnStep[]) => {
       const animSteps = buildAnimationSteps(steps, boardBefore)
       if (animSteps.length > 0) {
         enqueue(animSteps, () => {
           setDisplayBoard(null)
+          setSnapshotBoard(null)
           endTurn()
           setIsAnimating(false)
         })
       } else {
         setDisplayBoard(null)
+        setSnapshotBoard(null)
         endTurn()
         setIsAnimating(false)
       }
@@ -153,6 +158,7 @@ export default function App() {
       <GameBoard
         gameState={{ ...state, board: renderedBoard }}
         activeAnimation={activeEvent}
+        arrowBoard={snapshotBoard ?? state.board}
         viewport={viewport.viewport}
         onPointerDown={viewport.onPointerDown}
         onPointerMove={viewport.onPointerMove}

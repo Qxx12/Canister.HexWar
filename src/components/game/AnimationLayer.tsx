@@ -47,13 +47,24 @@ export function AnimationLayer({ activeEvent, board, hexSize, playerIndex }: Ani
   const isFight = activeEvent.kind === 'fight' || activeEvent.kind === 'conquer'
 
   const IMPACT_START = 0.65
-  const moveProgress = isFight ? Math.min(1, progress / IMPACT_START) : progress
+  const LAND_START = 0.6
+  // ease-out quad: decelerates as it approaches destination
+  const easeOut = (t: number) => 1 - (1 - t) * (1 - t)
+  const moveProgress = isFight
+    ? Math.min(1, progress / IMPACT_START)
+    : easeOut(progress)
   const impactProgress = isFight ? Math.max(0, (progress - IMPACT_START) / (1 - IMPACT_START)) : 0
 
   const cx = from.x + (to.x - from.x) * moveProgress
   const cy = from.y + (to.y - from.y) * moveProgress
 
-  const dotOpacity = isFight ? Math.max(0, 1 - impactProgress * 3) : 0.9
+  const landT = !isFight && progress > LAND_START
+    ? (progress - LAND_START) / (1 - LAND_START)
+    : 0
+  const dotRadius = isFight ? 8 : 6 * (1 - landT * 0.7)
+  const dotOpacity = isFight
+    ? Math.max(0, 1 - impactProgress * 3)
+    : 0.9 * (1 - landT)
   const burstRadius = hexSize * 0.2 + hexSize * impactProgress * 1.2
   const burstOpacity = impactProgress > 0 ? Math.max(0, 0.7 - impactProgress * 0.7) : 0
   const ringRadius = hexSize * impactProgress * 1.6
@@ -72,7 +83,7 @@ export function AnimationLayer({ activeEvent, board, hexSize, playerIndex }: Ani
       {dotOpacity > 0 && (
         <circle
           cx={cx} cy={cy}
-          r={isFight ? 8 : 6}
+          r={dotRadius}
           fill={color}
           stroke="#fff"
           strokeWidth={1.5}
