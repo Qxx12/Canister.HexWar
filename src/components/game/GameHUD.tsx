@@ -10,9 +10,11 @@ interface GameHUDProps {
   onRetire: () => void
   isAnimating: boolean
   animatingPlayerId: string | null
+  viewMode: '2d' | '3d'
+  onToggleView: () => void
 }
 
-export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating, animatingPlayerId }: GameHUDProps) {
+export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating, animatingPlayerId, viewMode, onToggleView }: GameHUDProps) {
   const [showRetireConfirm, setShowRetireConfirm] = useState(false)
   const { phase, players, humanPlayerId, turn } = gameState
   const isPlayerTurn = phase === 'playerTurn' && !isAnimating
@@ -66,6 +68,12 @@ export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating, animating
           </div>
           <span className={styles.turnNumber}>Turn {turn.turnNumber}</span>
         </div>
+      </div>
+
+      <div className={styles.viewToggle}>
+        <button className={styles.viewToggleBtn} onClick={onToggleView}>
+          {viewMode === '2d' ? '3D' : '2D'}
+        </button>
       </div>
 
       {showRetireConfirm && (

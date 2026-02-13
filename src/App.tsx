@@ -4,6 +4,7 @@ import { useViewport } from './hooks/useViewport'
 import { useAnimationQueue } from './hooks/useAnimationQueue'
 import type { AnimationStep } from './hooks/useAnimationQueue'
 import { GameBoard } from './components/game/GameBoard'
+import { GameBoard3D } from './components/game/GameBoard3D'
 import { GameHUD } from './components/game/GameHUD'
 import { StartScreen } from './components/screens/StartScreen'
 import { EndScreen } from './components/screens/EndScreen'
@@ -16,6 +17,7 @@ type AppScreen = 'start' | 'game' | 'end'
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('start')
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d')
   const { state, startGame, resetGame, setOrder, cancelOrder, setStandingOrder, cancelStandingOrder, executeHumanMovesAction, endTurn, resolveAi, retire } = useGameState()
   const viewport = useViewport()
   const handleBoardReady = useCallback((w: number, h: number) => {
@@ -153,29 +155,39 @@ export default function App() {
   // Use displayBoard for rendering during animation; fall back to state.board otherwise
   const renderedBoard = displayBoard ?? state.board
 
+  const sharedBoardProps = {
+    gameState: { ...state, board: renderedBoard },
+    activeAnimation: activeEvent,
+    arrowBoard: snapshotBoard ?? state.board,
+    onSetOrder: handleSetOrder,
+    onCancelOrder: cancelOrder,
+    onSetStandingOrder: handleSetStandingOrder,
+    onCancelStandingOrder: handleCancelStandingOrder,
+  }
+
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <GameBoard
-        gameState={{ ...state, board: renderedBoard }}
-        activeAnimation={activeEvent}
-        arrowBoard={snapshotBoard ?? state.board}
-        viewport={viewport.viewport}
-        onPointerDown={viewport.onPointerDown}
-        onPointerMove={viewport.onPointerMove}
-        onPointerUp={viewport.onPointerUp}
-        onWheel={viewport.onWheel}
-        onReady={handleBoardReady}
-        onSetOrder={handleSetOrder}
-        onCancelOrder={cancelOrder}
-        onSetStandingOrder={handleSetStandingOrder}
-        onCancelStandingOrder={handleCancelStandingOrder}
-      />
+      {viewMode === '2d' ? (
+        <GameBoard
+          {...sharedBoardProps}
+          viewport={viewport.viewport}
+          onPointerDown={viewport.onPointerDown}
+          onPointerMove={viewport.onPointerMove}
+          onPointerUp={viewport.onPointerUp}
+          onWheel={viewport.onWheel}
+          onReady={handleBoardReady}
+        />
+      ) : (
+        <GameBoard3D {...sharedBoardProps} />
+      )}
       <GameHUD
         gameState={state}
         onEndTurn={handleEndTurn}
         onRetire={handleRetire}
         isAnimating={isAnimating}
         animatingPlayerId={activeEvent?.playerId ?? null}
+        viewMode={viewMode}
+        onToggleView={() => setViewMode(v => v === '2d' ? '3d' : '2d')}
       />
     </div>
   )
