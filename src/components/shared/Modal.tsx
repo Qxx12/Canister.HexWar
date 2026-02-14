@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import styles from './Modal.module.scss'
 
 interface ModalProps {
@@ -15,12 +16,13 @@ export function Modal({ title, onClose, children, maxWidth }: ModalProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.dialog} style={maxWidth ? { maxWidth } : undefined} onClick={e => e.stopPropagation()}>
         <h3 className={styles.title}>{title}</h3>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
