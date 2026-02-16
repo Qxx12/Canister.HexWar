@@ -6,7 +6,7 @@ import type { Tile } from '../../types/board'
 import type { PlayerId } from '../../types/player'
 import { axialToPixel } from '../../types/hex'
 import { PLAYER_COLORS } from '../../types/player'
-import { TERRAIN_COLORS } from '../../types/board'
+import { getTerrainTexture } from './terrainTextures'
 
 export const TILE_DEPTH = 5
 export const SURFACE_Y = TILE_DEPTH / 2
@@ -28,11 +28,8 @@ export function HexTile3D({
 }: HexTile3DProps) {
   const { x, y: z } = axialToPixel(tile.coord, hexSize)
 
-  const tileColor = useMemo(() => {
-    const c = new THREE.Color(TERRAIN_COLORS[tile.terrain])
-    if (isSelected) c.multiplyScalar(0.88)
-    return c
-  }, [tile.terrain, isSelected])
+  const terrainTexture = useMemo(() => getTerrainTexture(tile.terrain), [tile.terrain])
+  const topColor = useMemo(() => new THREE.Color(isSelected ? '#aaaaaa' : '#ffffff'), [isSelected])
 
   const playerColor = tile.owner !== null ? PLAYER_COLORS[playerIndex(tile.owner)] : '#666'
   const starColor = tile.startOwner ? PLAYER_COLORS[playerIndex(tile.startOwner)] : '#666'
@@ -49,7 +46,8 @@ export function HexTile3D({
         <meshLambertMaterial attach="material-0" color="#c2a97a" />
         <meshLambertMaterial
           attach="material-1"
-          color={tileColor}
+          map={terrainTexture}
+          color={topColor}
           emissive={isValidDestination ? '#1db954' : '#000000'}
           emissiveIntensity={isValidDestination ? 0.35 : 0}
         />
