@@ -40,6 +40,7 @@ export function HexTile3D({
         rotation={[0, Math.PI / 3, 0]}
         onClick={e => { e.stopPropagation(); onClick() }}
         onPointerOver={onPointerOver}
+        onPointerMove={onPointerOver}
         onPointerOut={onPointerOut}
       >
         <cylinderGeometry args={[hexSize, hexSize, TILE_DEPTH, 6]} />
@@ -54,7 +55,7 @@ export function HexTile3D({
         <meshLambertMaterial attach="material-2" color="#c2a97a" />
       </mesh>
       {tile.owner !== null && (
-        <Html center position={[0, SURFACE_Y + 2, 0]} zIndexRange={[9, 0]} style={{ pointerEvents: 'none' }}>
+        <Html center position={[0, SURFACE_Y + 2, 0]} zIndexRange={[9, 0]} pointerEvents="none" style={{ pointerEvents: 'none' }}>
           <div style={{ textAlign: 'center', userSelect: 'none', whiteSpace: 'nowrap' }}>
             {tile.isStartTile && (
               <div style={{

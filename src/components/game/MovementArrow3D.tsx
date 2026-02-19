@@ -67,10 +67,10 @@ export function MovementArrow3D({
 
   return (
     <group>
-      <mesh geometry={geom}>
+      <mesh geometry={geom} raycast={() => null}>
         <meshBasicMaterial color={color} transparent opacity={opacity} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
-      <Html center position={[labelX, ARROW_Y + 4, labelZ]} zIndexRange={[9, 0]}>
+      <Html center position={[labelX, ARROW_Y + 4, labelZ]} zIndexRange={[9, 0]} pointerEvents="none">
         <div style={{
           color,
           fontWeight: 'bold',

@@ -135,7 +135,7 @@ function BorderStrip({ quad, color }: { quad: Quad['v']; color: string }) {
   }, [color])
 
   return (
-    <mesh geometry={geometry}>
+    <mesh geometry={geometry} raycast={() => null}>
       <shaderMaterial
         ref={matRef}
         vertexShader={STRIP_VERT}
@@ -174,7 +174,7 @@ function HexGrid3D({ board }: { board: Board }) {
   return (
     <>
       {edges.map(({ key, points }) => (
-        <Line key={key} points={points} color="#999999" lineWidth={1} />
+        <Line key={key} points={points} color="#999999" lineWidth={1} raycast={() => null} />
       ))}
     </>
   )
