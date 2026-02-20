@@ -56,9 +56,13 @@ export function HexTile3D({
       </mesh>
       {tile.owner !== null && (
         <Html center position={[0, SURFACE_Y + 2, 0]} zIndexRange={[9, 0]} pointerEvents="none" style={{ pointerEvents: 'none' }}>
-          <div style={{ textAlign: 'center', userSelect: 'none', whiteSpace: 'nowrap' }}>
+          <div style={{ textAlign: 'center', userSelect: 'none', whiteSpace: 'nowrap', position: 'relative' }}>
             {tile.isStartTile && (
               <div style={{
+                position: 'absolute',
+                bottom: '130%',
+                left: '50%',
+                transform: 'translateX(-50%)',
                 color: starColor,
                 fontSize: '12px',
                 lineHeight: 1,

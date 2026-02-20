@@ -116,7 +116,7 @@ $hud-blur:      blur(10px);
   border: 1px solid $hud-border;
   backdrop-filter: $hud-blur;
   color: $hud-text;
-  font-size: $font-size-md;
+  font-size: $font-size-sm;
   font-family: $font-family;
   @include flex-center;
   flex-shrink: 0;
