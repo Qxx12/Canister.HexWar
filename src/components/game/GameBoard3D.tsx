@@ -434,15 +434,25 @@ export function GameBoard3D({
 
   return (
     <div
-      style={{ width: '100%', height: '100%', position: 'relative' }}
+      style={{ width: '100%', height: '100%', position: 'relative', background: '#7e7368' }}
       onPointerMove={e => {
         mousePosRef.current = { x: e.clientX, y: e.clientY }
         resetTooltipOnMove()
       }}
     >
+      {/* Noise texture behind the canvas, matching the 2D board */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        opacity: 0.25,
+        backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E\")",
+        backgroundSize: '256px 256px',
+      }} />
       <Canvas
         camera={{ fov: 50 }}
-        style={{ background: '#7e7368' }}
+        gl={{ alpha: true }}
+        style={{ position: 'relative' }}
         onCreated={({ camera }) => {
           camera.position.set(0, boardRadius * 1.5, boardRadius * 0.85)
           camera.lookAt(0, 0, 0)
@@ -460,7 +470,6 @@ export function GameBoard3D({
           zoomSpeed={3}
           mouseButtons={{ LEFT: undefined as unknown as THREE.MOUSE, MIDDLE: undefined as unknown as THREE.MOUSE, RIGHT: THREE.MOUSE.PAN }}
         />
-        <color attach="background" args={['#7e7368']} />
         <group position={groupOffset}>
           <Scene
             gameState={gameState}
