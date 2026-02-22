@@ -25,6 +25,8 @@ A turn-based hexagonal grid strategy game. Command units across a procedurally g
 
 ### Controls
 
+**2D view**
+
 | Input | Action |
 |-------|--------|
 | Click tile | Select / set order destination |
@@ -32,6 +34,18 @@ A turn-based hexagonal grid strategy game. Command units across a procedurally g
 | Scroll / Pinch | Zoom |
 | `Enter` | End turn |
 | `Esc` | Open menu |
+
+**3D view**
+
+| Input | Action |
+|-------|--------|
+| Click tile | Select / set order destination |
+| Right-drag | Pan the board along the ground plane |
+| Scroll | Zoom |
+| `Enter` | End turn |
+| `Esc` | Open menu |
+
+Toggle between 2D and 3D using the **2D / 3D** button in the bottom-left corner.
 
 ---
 
@@ -42,6 +56,7 @@ A turn-based hexagonal grid strategy game. Command units across a procedurally g
 | Layer | Technology |
 |-------|-----------|
 | UI | React 19, TypeScript |
+| 3D rendering | Three.js, React Three Fiber, Drei |
 | Styling | SCSS Modules |
 | Build | Vite 8 |
 | Testing | Vitest 3, jsdom |
@@ -73,8 +88,15 @@ src/
 │   └── useAnimationQueue.ts # Sequential animation playback
 ├── components/
 │   ├── game/              # In-game UI (board, HUD, modals, tooltips)
+│   │   ├── GameBoard.tsx          # 2D SVG board
+│   │   ├── GameBoard3D.tsx        # 3D board (Three.js); territory borders, hex grid
+│   │   ├── HexTile3D.tsx          # Individual hex prism with terrain texture
+│   │   ├── MovementArrow3D.tsx    # Flat arrow overlay for movement orders
+│   │   ├── AnimationLayer3D.tsx   # 3D animation playback
+│   │   ├── terrainTextures.ts     # Procedural canvas textures per terrain type
+│   │   └── ...
 │   └── screens/           # Start and end screens
-└── tests/                 # Vitest unit tests
+└── tests/                 # Vitest unit tests (60 tests across 8 suites)
 ```
 
 ### Game State Flow
@@ -91,6 +113,19 @@ State lives in a React reducer (`useGameState`). The engine is pure functions �
 2. Punch ~22% of tiles as holes using layered positional noise + rng jitter (while maintaining full connectivity)
 3. Assign terrain by latitude (r-axis) with slight sine-wave noise
 4. Place player start tiles by maximising minimum pairwise distance across 200 random candidates
+
+### Terrain Textures (3D)
+
+Each terrain type has a procedurally generated canvas texture drawn with a seeded RNG (deterministic, no external assets):
+
+| Terrain | Visual |
+|---------|--------|
+| Grassland | Sparse grass tufts, tiny white flowers |
+| Plains | Dry grass strokes, small red/yellow wildflowers |
+| Desert | Wavy dune ripples, pebble ellipses |
+| Tundra | Snow blobs, olive moss patches, ice-crystal sparkles |
+
+Textures are created once per terrain type and cached for reuse.
 
 ### Combat Model
 
