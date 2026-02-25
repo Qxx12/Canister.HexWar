@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Line } from '@react-three/drei'
 import * as THREE from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
@@ -14,6 +14,35 @@ import { OrderModal } from './OrderModal'
 import { TileTooltip } from './TileTooltip'
 import { axialToPixel, hexCorners, hexNeighbors, hexToKey } from '../../types/hex'
 import { PLAYER_COLORS } from '../../types/player'
+
+// Maps zoom level directly to view angle — lower angle when zoomed in
+function CameraTiltController({ minDist, maxDist }: { minDist: number; maxDist: number }) {
+  const { camera } = useThree()
+  const controls = useThree(state => state.controls) as any
+
+  useFrame(() => {
+    if (!controls?.target) return
+    const target: THREE.Vector3 = controls.target
+    const offset = new THREE.Vector3().subVectors(camera.position, target)
+    const dist = offset.length()
+
+    const t = THREE.MathUtils.clamp((maxDist - dist) / (maxDist - minDist), 0, 1)
+    const polar = THREE.MathUtils.lerp(Math.PI * 0.17, Math.PI * 0.28, t)
+
+    // Directly set camera position with desired polar angle, keeping distance and azimuth.
+    // OrbitControls re-reads camera.position at the start of its next update(),
+    // so this persists without conflict.
+    const azimuth = Math.atan2(offset.x, offset.z)
+    camera.position.set(
+      target.x + dist * Math.sin(polar) * Math.sin(azimuth),
+      target.y + dist * Math.cos(polar),
+      target.z + dist * Math.sin(polar) * Math.cos(azimuth),
+    )
+    camera.lookAt(target)
+  }, -1)
+
+  return null
+}
 
 interface GameBoard3DProps {
   gameState: GameState
@@ -462,7 +491,6 @@ export function GameBoard3D({
           makeDefault
           minDistance={boardRadius * 0.5}
           maxDistance={boardRadius * 1.6}
-          maxPolarAngle={Math.PI / 2 * 0.92}
           enableDamping
           dampingFactor={0.08}
           enableRotate={false}
@@ -470,6 +498,7 @@ export function GameBoard3D({
           zoomSpeed={3}
           mouseButtons={{ LEFT: undefined as unknown as THREE.MOUSE, MIDDLE: undefined as unknown as THREE.MOUSE, RIGHT: THREE.MOUSE.PAN }}
         />
+        <CameraTiltController minDist={boardRadius * 0.5} maxDist={boardRadius * 1.6} />
         <group position={groupOffset}>
           <Scene
             gameState={gameState}

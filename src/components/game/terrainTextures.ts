@@ -44,7 +44,7 @@ function drawGrassland(ctx: CanvasRenderingContext2D, rng: () => number) {
 }
 
 function drawTundra(ctx: CanvasRenderingContext2D, rng: () => number) {
-  ctx.fillStyle = '#c2d6e8'
+  ctx.fillStyle = '#ddeaf4'
   ctx.fillRect(0, 0, SIZE, SIZE)
 
   // Subtle snow blobs
@@ -56,6 +56,25 @@ function drawTundra(ctx: CanvasRenderingContext2D, rng: () => number) {
     ctx.beginPath()
     ctx.ellipse(x, y, rx, ry, rng() * Math.PI, 0, Math.PI * 2)
     ctx.fillStyle = `rgba(240,248,255,${0.4 + rng() * 0.2})`
+    ctx.fill()
+  }
+
+  // Bare soil patches — irregular polygons
+  for (let i = 0; i < 8; i++) {
+    const x = rng() * SIZE
+    const y = rng() * SIZE
+    const r = 4 + rng() * 7
+    const pts = 5 + Math.floor(rng() * 4)
+    ctx.beginPath()
+    for (let p = 0; p < pts; p++) {
+      const a = (p / pts) * Math.PI * 2
+      const pr = r * (0.5 + rng() * 0.5)
+      const px = x + Math.cos(a) * pr
+      const py = y + Math.sin(a) * pr * (0.5 + rng() * 0.5)
+      p === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)
+    }
+    ctx.closePath()
+    ctx.fillStyle = `rgba(145, 118, 90, ${0.5 + rng() * 0.25})`
     ctx.fill()
   }
 
@@ -88,19 +107,19 @@ function drawDesert(ctx: CanvasRenderingContext2D, rng: () => number) {
 }
 
 function drawPlains(ctx: CanvasRenderingContext2D, rng: () => number) {
-  ctx.fillStyle = '#ccc870'
+  ctx.fillStyle = '#c0d078'
   ctx.fillRect(0, 0, SIZE, SIZE)
 
-  // Light dry grass strokes
-  for (let i = 0; i < 18; i++) {
+  // Dry grass strokes
+  for (let i = 0; i < 28; i++) {
     const x = rng() * SIZE
     const y = rng() * SIZE
-    const len = 6 + rng() * 7
+    const len = 6 + rng() * 8
     const angle = -Math.PI / 2 + (rng() - 0.5) * 0.6
     ctx.beginPath()
     ctx.moveTo(x, y)
     ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len)
-    ctx.strokeStyle = `rgba(115, 95, 18, ${0.25 + rng() * 0.3})`
+    ctx.strokeStyle = `rgba(100, 72, 10, ${0.4 + rng() * 0.35})`
     ctx.lineWidth = 1.2
     ctx.lineCap = 'round'
     ctx.stroke()
@@ -112,7 +131,7 @@ function drawPlains(ctx: CanvasRenderingContext2D, rng: () => number) {
     const y = rng() * SIZE
     ctx.beginPath()
     ctx.arc(x, y, 2, 0, Math.PI * 2)
-    ctx.fillStyle = rng() > 0.5 ? 'rgba(210,70,40,0.5)' : 'rgba(220,190,30,0.5)'
+    ctx.fillStyle = rng() > 0.5 ? 'rgba(210,70,40,0.6)' : 'rgba(220,190,30,0.6)'
     ctx.fill()
   }
 }
