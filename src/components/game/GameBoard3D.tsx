@@ -19,6 +19,7 @@ import { PLAYER_COLORS } from '../../types/player'
 function CameraTiltController({ minDist, maxDist }: { minDist: number; maxDist: number }) {
   const { camera } = useThree()
   const controls = useThree(state => state.controls) as any
+  const prevDist = useRef<number | null>(null)
 
   useFrame(() => {
     if (!controls?.target) return
@@ -26,12 +27,14 @@ function CameraTiltController({ minDist, maxDist }: { minDist: number; maxDist: 
     const offset = new THREE.Vector3().subVectors(camera.position, target)
     const dist = offset.length()
 
+    // Only correct polar angle while the user is actively zooming
+    const prev = prevDist.current
+    prevDist.current = dist
+    if (prev === null || Math.abs(dist - prev) < 0.01) return
+
     const t = THREE.MathUtils.clamp((maxDist - dist) / (maxDist - minDist), 0, 1)
     const polar = THREE.MathUtils.lerp(Math.PI * 0.17, Math.PI * 0.28, t)
 
-    // Directly set camera position with desired polar angle, keeping distance and azimuth.
-    // OrbitControls re-reads camera.position at the start of its next update(),
-    // so this persists without conflict.
     const azimuth = Math.atan2(offset.x, offset.z)
     camera.position.set(
       target.x + dist * Math.sin(polar) * Math.sin(azimuth),

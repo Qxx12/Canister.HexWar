@@ -119,7 +119,7 @@ function Oasis({ hexSize, q, r }: { hexSize: number; q: number; r: number }) {
     return Array.from({ length: count }, () => {
       const angle = rockRng() * Math.PI * 2
       const dist  = poolR * (0.85 + rockRng() * 0.1)
-      const w     = hexSize * (0.022 + rockRng() * 0.028)
+      const w     = hexSize * (0.033 + rockRng() * 0.042)
       const h     = w * (0.35 + rockRng() * 0.25)
       const d     = w * (0.6 + rockRng() * 0.4)
       const yRot  = rockRng() * Math.PI * 2
