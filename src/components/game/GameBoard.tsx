@@ -60,7 +60,6 @@ function TerritoryBorders({ board, playerIndex }: { board: Board; playerIndex: (
 
     // Build render list: external edges drawn in full, shared edges split in two halves
     const result: { key: string; x1: number; y1: number; x2: number; y2: number; color: string }[] = []
-    let i = 0
     for (const [edgeKey, segs] of edgeMap) {
       const { c1, c2 } = segs[0]
       if (segs.length === 1) {
@@ -71,7 +70,6 @@ function TerritoryBorders({ board, playerIndex }: { board: Board; playerIndex: (
         result.push({ key: `${edgeKey}-a`, x1: c1.x, y1: c1.y, x2: mx, y2: my, color: segs[0].color })
         result.push({ key: `${edgeKey}-b`, x1: mx, y1: my, x2: c2.x, y2: c2.y, color: segs[1].color })
       }
-      i++
     }
     return result
   }, [board, playerIndex])

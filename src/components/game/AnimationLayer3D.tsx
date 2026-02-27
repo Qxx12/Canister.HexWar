@@ -15,6 +15,7 @@ interface AnimationLayer3DProps {
 export function AnimationLayer3D({ activeEvent, board, hexSize, playerIndex }: AnimationLayer3DProps) {
   const [progress, setProgress] = useState(0)
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useLayoutEffect(() => { setProgress(0) }, [activeEvent])
 
   useEffect(() => {

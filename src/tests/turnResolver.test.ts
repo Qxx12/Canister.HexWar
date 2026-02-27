@@ -78,4 +78,69 @@ describe('resolvePlayerTurn', () => {
     expect(result.board.get('1,0')!.owner).toBeNull()
     expect(result.animationEvents).toHaveLength(0)
   })
+
+  it('skips order if target is not adjacent', () => {
+    const board = makeBoard([
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 3, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+    ])
+    const orders: OrderMap = new Map([
+      ['0,0', { fromKey: '0,0', toKey: '3,0', requestedUnits: 3 }],
+    ])
+    const result = resolvePlayerTurn(board, players, orders, 'p0', makeStats())
+    expect(result.animationEvents).toHaveLength(0)
+  })
+
+  it('records a fight event when attacker fails to conquer', () => {
+    const board = makeBoard([
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+    ])
+    const orders: OrderMap = new Map([['0,0', { fromKey: '0,0', toKey: '1,0', requestedUnits: 2 }]])
+    const result = resolvePlayerTurn(board, players, orders, 'p0', makeStats())
+    expect(result.animationEvents[0].kind).toBe('fight')
+  })
+
+  it('increments unitsKilled stat on successful combat', () => {
+    const board = makeBoard([
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 3, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+    ])
+    const orders: OrderMap = new Map([['0,0', { fromKey: '0,0', toKey: '1,0', requestedUnits: 5 }]])
+    const result = resolvePlayerTurn(board, players, orders, 'p0', makeStats())
+    expect(result.runningStats.get('p0')!.unitsKilled).toBe(3)
+  })
+
+  it('increments tilesConquered and tilesLost stats on conquest', () => {
+    const board = makeBoard([
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+    ])
+    const orders: OrderMap = new Map([['0,0', { fromKey: '0,0', toKey: '1,0', requestedUnits: 5 }]])
+    const result = resolvePlayerTurn(board, players, orders, 'p0', makeStats())
+    expect(result.runningStats.get('p0')!.tilesConquered).toBe(1)
+    expect(result.runningStats.get('p1')!.tilesLost).toBe(1)
+  })
+
+  it('eliminates a player who loses their last tile', () => {
+    const board = makeBoard([
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+    ])
+    const orders: OrderMap = new Map([['0,0', { fromKey: '0,0', toKey: '1,0', requestedUnits: 5 }]])
+    const result = resolvePlayerTurn(board, players, orders, 'p0', makeStats())
+    const p1 = result.players.find(p => p.id === 'p1')!
+    expect(p1.isEliminated).toBe(true)
+  })
+
+  it('caps requestedUnits to initial board snapshot to prevent chaining', () => {
+    // p0 starts with 3; if chaining were allowed, units arriving mid-turn could be resent
+    const board = makeBoard([
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 3, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p0', units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+    ])
+    const orders: OrderMap = new Map([['0,0', { fromKey: '0,0', toKey: '1,0', requestedUnits: 99 }]])
+    const result = resolvePlayerTurn(board, players, orders, 'p0', makeStats())
+    expect(result.board.get('1,0')!.units).toBe(3) // only 3 sent, not 99
+  })
 })

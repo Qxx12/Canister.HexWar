@@ -15,9 +15,8 @@ interface AnimationLayerProps {
 export function AnimationLayer({ activeEvent, board, hexSize, playerIndex }: AnimationLayerProps) {
   const [progress, setProgress] = useState(0)
 
-  useLayoutEffect(() => {
-    setProgress(0)
-  }, [activeEvent])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useLayoutEffect(() => { setProgress(0) }, [activeEvent])
 
   useEffect(() => {
     if (!activeEvent) return

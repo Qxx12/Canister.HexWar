@@ -71,7 +71,7 @@ function drawTundra(ctx: CanvasRenderingContext2D, rng: () => number) {
       const pr = r * (0.5 + rng() * 0.5)
       const px = x + Math.cos(a) * pr
       const py = y + Math.sin(a) * pr * (0.5 + rng() * 0.5)
-      p === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)
+      if (p === 0) { ctx.moveTo(px, py) } else { ctx.lineTo(px, py) }
     }
     ctx.closePath()
     ctx.fillStyle = `rgba(145, 118, 90, ${0.5 + rng() * 0.25})`

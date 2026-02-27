@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hexNeighbors, hexDistance, hexEquals, hexToKey, keyToHex, axialToPixel } from '../types/hex'
+import { hexNeighbors, hexDistance, hexEquals, hexToKey, keyToHex, axialToPixel, hexCorners } from '../types/hex'
 
 describe('hexNeighbors', () => {
   it('returns 6 neighbors', () => {
@@ -52,5 +52,29 @@ describe('axialToPixel', () => {
     const pos = axialToPixel({ q: 0, r: 0 }, 40)
     expect(pos.x).toBe(0)
     expect(pos.y).toBe(0)
+  })
+})
+
+describe('hexCorners', () => {
+  it('returns 6 corners', () => {
+    expect(hexCorners(0, 0, 10)).toHaveLength(6)
+  })
+
+  it('each corner is at the correct distance from center', () => {
+    const size = 20
+    const corners = hexCorners(0, 0, size)
+    for (const { x, y } of corners) {
+      const dist = Math.sqrt(x * x + y * y)
+      expect(dist).toBeCloseTo(size, 5)
+    }
+  })
+
+  it('offsets corners by the given center', () => {
+    const centered = hexCorners(0, 0, 10)
+    const shifted  = hexCorners(100, 50, 10)
+    for (let i = 0; i < 6; i++) {
+      expect(shifted[i].x).toBeCloseTo(centered[i].x + 100, 5)
+      expect(shifted[i].y).toBeCloseTo(centered[i].y + 50,  5)
+    }
   })
 })

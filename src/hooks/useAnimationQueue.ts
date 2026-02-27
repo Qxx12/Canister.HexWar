@@ -12,6 +12,7 @@ export function useAnimationQueue() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onAllCompleteRef = useRef<(() => void) | null>(null)
 
+  const processNextRef = useRef<() => void>(() => {})
   const processNext = useCallback(() => {
     if (queueRef.current.length === 0) {
       setActiveEvent(null)
@@ -22,9 +23,10 @@ export function useAnimationQueue() {
     setActiveEvent(next.event)
     timerRef.current = setTimeout(() => {
       next.onStepComplete()
-      processNext()
+      processNextRef.current()
     }, next.event.durationMs)
   }, [])
+  useEffect(() => { processNextRef.current = processNext }, [processNext])
 
   const enqueue = useCallback((steps: AnimationStep[], onAllComplete: () => void) => {
     queueRef.current = [...steps]

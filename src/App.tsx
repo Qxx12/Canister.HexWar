@@ -22,6 +22,7 @@ export default function App() {
   const viewport = useViewport()
   const handleBoardReady = useCallback((w: number, h: number) => {
     viewport.centerBoard(w, h)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewport.centerBoard])
   const { activeEvent, enqueue, clearQueue } = useAnimationQueue()
   const [isAnimating, setIsAnimating] = useState(false)

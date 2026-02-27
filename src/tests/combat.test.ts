@@ -99,4 +99,27 @@ describe('applyCombatResult', () => {
     expect(newBoard.get('1,0')!.owner).toBe('p0')
     expect(newBoard.get('1,0')!.units).toBe(2) // 5 - 3
   })
+
+  it('failed attack: defender keeps tile, both sides lose units', () => {
+    const board = makeBoard([
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 2, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+    ])
+    const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 2 }, 'p0')
+    const newBoard = applyCombatResult(board, result)
+    expect(newBoard.get('1,0')!.owner).toBe('p1')       // defender keeps tile
+    expect(newBoard.get('1,0')!.units).toBe(3)           // 5 - 2 casualties
+    expect(newBoard.get('0,0')!.units).toBe(0)           // all attackers sent
+  })
+
+  it('moves to unconquered tile, sets owner', () => {
+    const board = makeBoard([
+      { coord: { q: 0, r: 0 }, owner: 'p0', units: 4, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+      { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+    ])
+    const result = resolveCombat(board, { fromKey: '0,0', toKey: '1,0', requestedUnits: 4 }, 'p0')
+    const newBoard = applyCombatResult(board, result)
+    expect(newBoard.get('1,0')!.owner).toBe('p0')
+    expect(newBoard.get('1,0')!.units).toBe(4)
+  })
 })

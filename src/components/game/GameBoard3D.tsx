@@ -18,6 +18,7 @@ import { PLAYER_COLORS } from '../../types/player'
 // Maps zoom level directly to view angle — lower angle when zoomed in
 function CameraTiltController({ minDist, maxDist }: { minDist: number; maxDist: number }) {
   const { camera } = useThree()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const controls = useThree(state => state.controls) as any
   const prevDist = useRef<number | null>(null)
 
@@ -404,6 +405,7 @@ export function GameBoard3D({
     if (!tooltip) return
     const current = board.get(hexToKey(tooltip.tile.coord))
     if (!current || current.units !== tooltip.tile.units || current.owner !== tooltip.tile.owner) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       hideTooltip()
     }
   }, [board, tooltip, hideTooltip])

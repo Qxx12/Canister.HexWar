@@ -21,12 +21,14 @@ export function OrderModal({ fromKey: _fromKey, toKey: _toKey, maxUnits, existin
   const [standing, setStanding] = useState(isStanding)
   const [allUnits, setAllUnits] = useState(isExistingAll)
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const existingAll = existingOrder === UNITS_ALL
     setUnits(Math.min(Math.max(1, existingAll ? maxUnits : (existingOrder ?? maxUnits)), maxUnits))
     setStanding(isStanding)
     setAllUnits(existingAll)
   }, [existingOrder, maxUnits, isStanding])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const adjust = (delta: number) =>
     setUnits(u => Math.min(maxUnits, Math.max(1, u + delta)))
