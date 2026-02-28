@@ -154,7 +154,25 @@ export function useViewport() {
     pendingCapture.current = null
     lastPinchDist.current = null
     lastPinchMid.current = null
+
+    // After a pinch ends, set up pan state for the remaining finger so it can pan immediately
+    if (activePointers.current.size === 1) {
+      const [remainingId, remainingPos] = [...activePointers.current.entries()][0]
+      startPos.current = remainingPos
+      lastPos.current = remainingPos
+      pendingCapture.current = { pointerId: remainingId, target: e.currentTarget }
+    }
   }, [])
 
-  return { viewport, centerBoard, resetViewport, onWheel, onPointerDown, onPointerMove, onPointerUp }
+  // pointercancel fires when the browser takes over a gesture (e.g. page scroll/zoom).
+  // Without this, activePointers stays stale and the next single-finger touch is misread as a pinch.
+  const onPointerCancel = useCallback(() => {
+    activePointers.current.clear()
+    isPanning.current = false
+    pendingCapture.current = null
+    lastPinchDist.current = null
+    lastPinchMid.current = null
+  }, [])
+
+  return { viewport, centerBoard, resetViewport, onWheel, onPointerDown, onPointerMove, onPointerUp, onPointerCancel }
 }

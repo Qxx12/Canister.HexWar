@@ -8,6 +8,7 @@
   background: $color-bg;
   cursor: grab;
   user-select: none;
+  touch-action: none;
   animation: fadeIn 0.6s ease-out both;
 
   &::before {

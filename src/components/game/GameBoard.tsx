@@ -20,6 +20,7 @@ interface GameBoardProps {
   onPointerDown: (e: React.PointerEvent) => void
   onPointerMove: (e: React.PointerEvent) => void
   onPointerUp: (e: React.PointerEvent) => void
+  onPointerCancel: () => void
   onWheel: (e: React.WheelEvent) => void
   onReady: (width: number, height: number) => void
   onSetOrder: (fromKey: string, toKey: string, units: number) => void
@@ -92,6 +93,7 @@ export function GameBoard({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onPointerCancel,
   onWheel,
   onReady,
   onSetOrder,
@@ -238,6 +240,7 @@ export function GameBoard({
         onPointerDown={onPointerDown}
         onPointerMove={e => { onPointerMove(e); mousePosRef.current = { x: e.clientX, y: e.clientY }; resetTooltipOnMove() }}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
         onWheel={onWheel}
       >
         <div

@@ -175,6 +175,7 @@ export default function App() {
           onPointerDown={viewport.onPointerDown}
           onPointerMove={viewport.onPointerMove}
           onPointerUp={viewport.onPointerUp}
+          onPointerCancel={viewport.onPointerCancel}
           onWheel={viewport.onWheel}
           onReady={handleBoardReady}
         />
