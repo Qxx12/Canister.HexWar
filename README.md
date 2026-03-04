@@ -59,7 +59,8 @@ Toggle between 2D and 3D using the **2D / 3D** button in the bottom-left corner.
 | 3D rendering | Three.js, React Three Fiber, Drei |
 | Styling | SCSS Modules |
 | Build | Vite 8 |
-| Testing | Vitest 3, jsdom |
+| Unit testing | Vitest 3, jsdom, Testing Library |
+| E2E testing | Playwright |
 
 ### Project Structure
 
@@ -96,7 +97,8 @@ src/
 │   │   ├── terrainTextures.ts     # Procedural canvas textures per terrain type
 │   │   └── ...
 │   └── screens/           # Start and end screens
-└── tests/                 # Vitest unit tests (60 tests across 8 suites)
+└── tests/                 # Vitest unit tests (91 tests across 10 suites)
+e2e/                       # Playwright end-to-end tests (29 tests)
 ```
 
 ### Game State Flow
@@ -156,9 +158,11 @@ The AI runs a two-phase decision per turn:
 
 ```bash
 npm install
-npm run dev        # dev server at localhost:5173
-npm run build      # production build → dist/
-npm run test       # run tests in watch mode
-npm run test:run   # run tests once
-npm run lint       # ESLint
+npm run dev          # dev server at localhost:5173
+npm run build        # production build → dist/
+npm run lint         # ESLint
+npm run test         # unit tests (watch mode)
+npm run test:run     # unit tests (once)
+npm run test:e2e     # end-to-end tests (headless, builds first)
+npm run test:e2e:ui  # end-to-end tests with Playwright interactive UI
 ```
