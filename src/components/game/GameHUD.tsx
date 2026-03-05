@@ -12,9 +12,13 @@ interface GameHUDProps {
   animatingPlayerId: string | null
   viewMode: '2d' | '3d'
   onToggleView: () => void
+  sunEnabled: boolean
+  onToggleSun: () => void
+  shadowsEnabled: boolean
+  onToggleShadows: () => void
 }
 
-export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating, animatingPlayerId, viewMode, onToggleView }: GameHUDProps) {
+export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating, animatingPlayerId, viewMode, onToggleView, sunEnabled, onToggleSun, shadowsEnabled, onToggleShadows }: GameHUDProps) {
   const [showRetireConfirm, setShowRetireConfirm] = useState(false)
   const { phase, players, humanPlayerId, turn } = gameState
   const isPlayerTurn = phase === 'playerTurn' && !isAnimating
@@ -71,9 +75,27 @@ export function GameHUD({ gameState, onEndTurn, onRetire, isAnimating, animating
       </div>
 
       <div className={styles.viewToggle}>
-        <button className={styles.viewToggleBtn} onClick={onToggleView}>
-          {viewMode === '2d' ? '3D' : '2D'}
+        <button className={`${styles.viewToggleBtn} ${viewMode === '3d' ? styles.viewToggleBtnActive : ''}`} onClick={onToggleView}>
+          {viewMode === '2d' ? '2D' : '3D'}
         </button>
+        {viewMode === '3d' && (
+          <button
+            className={`${styles.viewToggleBtn} ${styles.sunBtn} ${sunEnabled ? styles.viewToggleBtnActive : ''}`}
+            onClick={onToggleSun}
+            title={sunEnabled ? 'Sun: on' : 'Sun: off'}
+          >
+            ☀
+          </button>
+        )}
+        {viewMode === '3d' && (
+          <button
+            className={`${styles.viewToggleBtn} ${shadowsEnabled ? styles.viewToggleBtnActive : ''}`}
+            onClick={onToggleShadows}
+            title={shadowsEnabled ? 'Shadows: on' : 'Shadows: off'}
+          >
+            ◐
+          </button>
+        )}
       </div>
 
       {showRetireConfirm && (

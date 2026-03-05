@@ -15,6 +15,25 @@ import { TileTooltip } from './TileTooltip'
 import { axialToPixel, hexCorners, hexNeighbors, hexToKey } from '../../types/hex'
 import { PLAYER_COLORS } from '../../types/player'
 
+// Directional light placed at the specular mirror of the camera's default position
+// (same height, same radial distance, opposite Z) so sun glints off flat pool surfaces
+function SunLight({ boardRadius, shadowsEnabled }: { boardRadius: number; shadowsEnabled: boolean }) {
+  return (
+    <directionalLight
+      castShadow={shadowsEnabled}
+      position={[boardRadius * 0.8, boardRadius * 1.5, -boardRadius * 0.85]}
+      intensity={1.8}
+      shadow-mapSize={[2048, 2048]}
+      shadow-camera-left={-boardRadius * 1.5}
+      shadow-camera-right={boardRadius * 1.5}
+      shadow-camera-top={boardRadius * 1.5}
+      shadow-camera-bottom={-boardRadius * 1.5}
+      shadow-camera-near={1}
+      shadow-camera-far={boardRadius * 6}
+    />
+  )
+}
+
 // Maps zoom level directly to view angle — lower angle when zoomed in
 function CameraTiltController({ minDist, maxDist }: { minDist: number; maxDist: number }) {
   const { camera } = useThree()
@@ -52,6 +71,8 @@ interface GameBoard3DProps {
   gameState: GameState
   activeAnimation: AnimationEvent | null
   arrowBoard: Board
+  sunEnabled: boolean
+  shadowsEnabled: boolean
   onSetOrder: (fromKey: string, toKey: string, units: number) => void
   onCancelOrder: (fromKey: string) => void
   onSetStandingOrder: (fromKey: string, toKey: string, units: number) => void
@@ -265,7 +286,7 @@ function TerritoryBorders3D({ board, playerIndex }: { board: Board; playerIndex:
 
 function Scene({
   gameState, activeAnimation, arrowBoard,
-  selectedKey, validDestinations,
+  selectedKey, validDestinations, sunEnabled, shadowsEnabled, boardRadius,
   onTileClick, onTilePointerOver, onTilePointerOut, playerIndex,
 }: {
   gameState: GameState
@@ -273,6 +294,9 @@ function Scene({
   arrowBoard: Board
   selectedKey: string | null
   validDestinations: Set<string>
+  sunEnabled: boolean
+  shadowsEnabled: boolean
+  boardRadius: number
   onTileClick: (key: string) => void
   onTilePointerOver: (tile: Tile, e: ThreeEvent<PointerEvent>) => void
   onTilePointerOut: () => void
@@ -285,8 +309,8 @@ function Scene({
 
   return (
     <>
-      <ambientLight intensity={1.5} />
-      <directionalLight position={[200, 400, 300]} intensity={0.7} />
+      <ambientLight intensity={sunEnabled ? 0.9 : 1.5} />
+      {sunEnabled && <SunLight boardRadius={boardRadius} shadowsEnabled={shadowsEnabled} />}
       {tiles.map(tile => {
         const key = hexToKey(tile.coord)
         return (
@@ -334,7 +358,7 @@ function Scene({
 }
 
 export function GameBoard3D({
-  gameState, activeAnimation, arrowBoard,
+  gameState, activeAnimation, arrowBoard, sunEnabled, shadowsEnabled,
   onSetOrder, onCancelOrder, onSetStandingOrder, onCancelStandingOrder,
 }: GameBoard3DProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
@@ -484,6 +508,7 @@ export function GameBoard3D({
         backgroundSize: '256px 256px',
       }} />
       <Canvas
+        shadows
         camera={{ fov: 50 }}
         gl={{ alpha: true }}
         style={{ position: 'relative' }}
@@ -511,6 +536,9 @@ export function GameBoard3D({
             arrowBoard={arrowBoard}
             selectedKey={selectedKey}
             validDestinations={validDestinations}
+            sunEnabled={sunEnabled}
+            shadowsEnabled={shadowsEnabled}
+            boardRadius={boardRadius}
             onTileClick={handleTileClick}
             onTilePointerOver={handleTilePointerOver}
             onTilePointerOut={hideTooltip}

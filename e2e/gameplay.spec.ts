@@ -42,8 +42,8 @@ test.describe('HUD', () => {
     await expect(page.getByTitle('End Turn')).toBeEnabled()
   })
 
-  test('view toggle button shows 3D (currently in 2D mode)', async ({ page }) => {
-    await expect(page.getByRole('button', { name: '3D' })).toBeVisible()
+  test('view toggle button shows 2D (current mode)', async ({ page }) => {
+    await expect(page.getByRole('button', { name: '2D' })).toBeVisible()
   })
 
   test('menu button is visible', async ({ page }) => {
@@ -135,24 +135,78 @@ test.describe('View toggle', () => {
     await startGame(page)
   })
 
-  test('toggling to 3D shows 2D button', async ({ page }) => {
-    await page.getByRole('button', { name: '3D' }).click()
-    await expect(page.getByRole('button', { name: '2D' })).toBeVisible()
-  })
-
-  test('toggling back to 2D shows 3D button and restores SVG board', async ({ page }) => {
-    await page.getByRole('button', { name: '3D' }).click()
+  test('toggling to 3D shows 3D button (current mode)', async ({ page }) => {
     await page.getByRole('button', { name: '2D' }).click()
     await expect(page.getByRole('button', { name: '3D' })).toBeVisible()
+  })
+
+  test('toggling back to 2D shows 2D button and restores SVG board', async ({ page }) => {
+    await page.getByRole('button', { name: '2D' }).click()
+    await page.getByRole('button', { name: '3D' }).click()
+    await expect(page.getByRole('button', { name: '2D' })).toBeVisible()
     await expect(page.locator('svg polygon').first()).toBeVisible()
   })
 
   test('End Turn works in 3D mode', async ({ page }) => {
-    await page.getByRole('button', { name: '3D' }).click()
+    await page.getByRole('button', { name: '2D' }).click()
     await expect(page.getByTitle('End Turn')).toBeEnabled()
     await page.getByTitle('End Turn').click()
     await expect(page.getByTitle('End Turn')).toBeEnabled({ timeout: 15000 })
     await expect(page.getByText('Turn 2')).toBeVisible()
+  })
+})
+
+// ─── Sun and shadow toggles ──────────────────────────────────────────────────
+
+test.describe('Sun and shadow toggles', () => {
+  test.beforeEach(async ({ page }) => {
+    await startGame(page)
+  })
+
+  test('sun button not visible in 2D mode', async ({ page }) => {
+    await expect(page.getByTitle('Sun: on')).not.toBeVisible()
+    await expect(page.getByTitle('Sun: off')).not.toBeVisible()
+  })
+
+  test('shadow button not visible in 2D mode', async ({ page }) => {
+    await expect(page.getByTitle('Shadows: on')).not.toBeVisible()
+    await expect(page.getByTitle('Shadows: off')).not.toBeVisible()
+  })
+
+  test('sun button is visible and on when switching to 3D', async ({ page }) => {
+    await page.getByRole('button', { name: '2D' }).click()
+    await expect(page.getByTitle('Sun: on')).toBeVisible()
+  })
+
+  test('shadow button is visible when switching to 3D', async ({ page }) => {
+    await page.getByRole('button', { name: '2D' }).click()
+    await expect(page.getByTitle('Shadows: on')).toBeVisible()
+  })
+
+  test('sun button toggles off and on', async ({ page }) => {
+    await page.getByRole('button', { name: '2D' }).click()
+    await page.getByTitle('Sun: on').click()
+    await expect(page.getByTitle('Sun: off')).toBeVisible()
+    await page.getByTitle('Sun: off').click()
+    await expect(page.getByTitle('Sun: on')).toBeVisible()
+  })
+
+  test('shadow button toggles off and on', async ({ page }) => {
+    await page.getByRole('button', { name: '2D' }).click()
+    await page.getByTitle('Shadows: on').click()
+    await expect(page.getByTitle('Shadows: off')).toBeVisible()
+    await page.getByTitle('Shadows: off').click()
+    await expect(page.getByTitle('Shadows: on')).toBeVisible()
+  })
+
+  test('sun resets to on when switching back to 3D after turning it off', async ({ page }) => {
+    await page.getByRole('button', { name: '2D' }).click()
+    await page.getByTitle('Sun: on').click()
+    await expect(page.getByTitle('Sun: off')).toBeVisible()
+    // Switch to 2D then back to 3D — sun should re-enable
+    await page.getByRole('button', { name: '3D' }).click()
+    await page.getByRole('button', { name: '2D' }).click()
+    await expect(page.getByTitle('Sun: on')).toBeVisible()
   })
 })
 

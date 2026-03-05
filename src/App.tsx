@@ -18,6 +18,16 @@ type AppScreen = 'start' | 'game' | 'end'
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('start')
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d')
+  const [sunEnabled, setSunEnabled] = useState(true)
+  const [shadowsEnabled, setShadowsEnabled] = useState(true)
+
+  // Re-enable sun whenever switching to 3D
+  const handleToggleView = useCallback(() => {
+    setViewMode(v => {
+      if (v === '2d') setSunEnabled(true)
+      return v === '2d' ? '3d' : '2d'
+    })
+  }, [])
   const { state, startGame, resetGame, setOrder, cancelOrder, setStandingOrder, cancelStandingOrder, executeHumanMovesAction, endTurn, resolveAi, retire } = useGameState()
   const viewport = useViewport()
   const handleBoardReady = useCallback((w: number, h: number) => {
@@ -180,7 +190,7 @@ export default function App() {
           onReady={handleBoardReady}
         />
       ) : (
-        <GameBoard3D {...sharedBoardProps} />
+        <GameBoard3D {...sharedBoardProps} sunEnabled={sunEnabled} shadowsEnabled={shadowsEnabled} />
       )}
       <GameHUD
         gameState={state}
@@ -189,7 +199,11 @@ export default function App() {
         isAnimating={isAnimating}
         animatingPlayerId={activeEvent?.playerId ?? null}
         viewMode={viewMode}
-        onToggleView={() => setViewMode(v => v === '2d' ? '3d' : '2d')}
+        onToggleView={handleToggleView}
+        sunEnabled={sunEnabled}
+        onToggleSun={() => setSunEnabled(v => !v)}
+        shadowsEnabled={shadowsEnabled}
+        onToggleShadows={() => setShadowsEnabled(v => !v)}
       />
     </div>
   )

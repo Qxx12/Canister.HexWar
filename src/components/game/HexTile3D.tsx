@@ -59,9 +59,9 @@ function Trees({ terrain, hexSize, treeSpecs }: { terrain: TerrainType; hexSize:
         return (
           <group key={i} position={[spec.x * hexSize, SURFACE_Y, spec.z * hexSize]} rotation={[0, spec.yRot, 0]}>
             {/* Trunk */}
-            <mesh position={[0, trunkH / 2, 0]} raycast={() => null}>
+            <mesh castShadow position={[0, trunkH / 2, 0]} raycast={() => null}>
               <cylinderGeometry args={[hexSize * 0.018 * s, hexSize * 0.025 * s, trunkH, 5]} />
-              <meshLambertMaterial color="#5c3a1e" />
+              <meshLambertMaterial color="#5c3a1e" emissive="#5c3a1e" emissiveIntensity={0.25} />
             </mesh>
             {/* Shadow disc cast by upper layer onto lower */}
             <mesh position={[0, trunkH + coneH * 0.45, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
@@ -74,9 +74,9 @@ function Trees({ terrain, hexSize, treeSpecs }: { terrain: TerrainType; hexSize:
               const hScale = 1 - level * 0.2
               const yBase  = trunkH + level * coneH * 0.45
               return (
-                <mesh key={level} position={[0, yBase + (coneH * hScale) / 2, 0]} raycast={() => null}>
+                <mesh castShadow key={level} position={[0, yBase + (coneH * hScale) / 2, 0]} raycast={() => null}>
                   <coneGeometry args={[coneR * rScale, coneH * hScale, 6]} />
-                  <meshLambertMaterial color={color} />
+                  <meshLambertMaterial color={color} emissive={color} emissiveIntensity={0.2} />
                 </mesh>
               )
             })}
@@ -181,11 +181,18 @@ function Oasis({ hexSize, q, r }: { hexSize: number; q: number; r: number }) {
       {/* Water pool */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.3, 0]} renderOrder={1} raycast={() => null}>
         <planeGeometry args={[poolR * 2, poolR * 2]} />
-        <meshBasicMaterial map={waterTexture} transparent depthWrite={false} depthTest={false} />
+        <meshStandardMaterial
+          map={waterTexture}
+          roughness={0.0}
+          metalness={0.0}
+          transparent
+          depthWrite={false}
+          depthTest={false}
+        />
       </mesh>
       {/* Rocks around pool */}
       {rocks.map((rock, i) => (
-        <mesh key={i} position={[rock.x, 0.3 + rock.h / 2, rock.z]} rotation={[0, rock.yRot, 0]} scale={[rock.w, rock.h, rock.d]} renderOrder={2} raycast={() => null}>
+        <mesh castShadow key={i} position={[rock.x, 0.3 + rock.h / 2, rock.z]} rotation={[0, rock.yRot, 0]} scale={[rock.w, rock.h, rock.d]} renderOrder={2} raycast={() => null}>
           <sphereGeometry args={[1, 5, 4]} />
           <meshLambertMaterial color={rock.color} transparent />
         </mesh>
@@ -202,9 +209,9 @@ function Oasis({ hexSize, q, r }: { hexSize: number; q: number; r: number }) {
             {/* Tilted group — trunk and fronds share the same lean */}
             <group rotation={[leanX, 0, leanZ]}>
               {/* Trunk */}
-              <mesh position={[0, trunkH / 2, 0]} raycast={() => null}>
+              <mesh castShadow position={[0, trunkH / 2, 0]} raycast={() => null}>
                 <cylinderGeometry args={[hexSize * 0.01 * s, hexSize * 0.018 * s, trunkH, 5]} />
-                <meshLambertMaterial color="#8b6914" />
+                <meshLambertMaterial color="#8b6914" emissive="#8b6914" emissiveIntensity={0.25} />
               </mesh>
               {/* Fronds — always at trunk tip in local space */}
               <group position={[0, trunkH, 0]}>
@@ -215,9 +222,9 @@ function Oasis({ hexSize, q, r }: { hexSize: number; q: number; r: number }) {
                   return (
                     <group key={j} rotation={[0, (j / 11) * Math.PI * 2, 0]}>
                       <group rotation={[droop, 0, 0]}>
-                        <mesh position={[0, 0, frondL / 2]} raycast={() => null}>
+                        <mesh castShadow position={[0, 0, frondL / 2]} raycast={() => null}>
                           <boxGeometry args={[frondW, hexSize * 0.004 * s, frondL]} />
-                          <meshLambertMaterial color="#4a8a20" />
+                          <meshLambertMaterial color="#4a8a20" emissive="#4a8a20" emissiveIntensity={0.2} />
                         </mesh>
                       </group>
                     </group>
@@ -309,23 +316,23 @@ function Deer({ hexSize, spec }: { hexSize: number; spec: { x: number; z: number
   return (
     <group position={[spec.x * hexSize, SURFACE_Y, spec.z * hexSize]} rotation={[0, spec.yRot, 0]}>
       {/* Body */}
-      <mesh position={[0, s * 0.55, 0]} raycast={() => null}>
+      <mesh castShadow position={[0, s * 0.55, 0]} raycast={() => null}>
         <boxGeometry args={[s * 0.5, s * 0.4, s * 1.0]} />
         <meshLambertMaterial color={bodyColor} />
       </mesh>
       {/* Neck */}
-      <mesh ref={neckRef} position={[0, s * 0.85, s * 0.55]} rotation={[0.5, 0, 0]} raycast={() => null}>
+      <mesh castShadow ref={neckRef} position={[0, s * 0.85, s * 0.55]} rotation={[0.5, 0, 0]} raycast={() => null}>
         <boxGeometry args={[s * 0.22, s * 0.38, s * 0.18]} />
         <meshLambertMaterial color={bodyColor} />
       </mesh>
       {/* Head */}
-      <mesh ref={headRef} position={[0, s * 1.05, s * 0.75]} raycast={() => null}>
+      <mesh castShadow ref={headRef} position={[0, s * 1.05, s * 0.75]} raycast={() => null}>
         <boxGeometry args={[s * 0.26, s * 0.26, s * 0.36]} />
         <meshLambertMaterial color={bodyColor} />
       </mesh>
       {/* Legs */}
       {([[-0.16, -0.32], [0.16, -0.32], [-0.16, 0.32], [0.16, 0.32]] as [number, number][]).map(([lx, lz], i) => (
-        <mesh key={i} position={[lx * s, s * 0.18, lz * s]} raycast={() => null}>
+        <mesh castShadow key={i} position={[lx * s, s * 0.18, lz * s]} raycast={() => null}>
           <boxGeometry args={[s * 0.1, s * 0.44, s * 0.1]} />
           <meshLambertMaterial color={legColor} />
         </mesh>
@@ -334,11 +341,11 @@ function Deer({ hexSize, spec }: { hexSize: number; spec: { x: number; z: number
       <group ref={antlerGroupRef} position={[0, s * 1.22, s * 0.72]}>
         {([-1, 1] as const).map((side, i) => (
           <group key={i} position={[side * s * 0.1, 0, 0]}>
-            <mesh position={[side * s * 0.1, s * 0.22, 0]} rotation={[0, 0, side * 0.45]} raycast={() => null}>
+            <mesh castShadow position={[side * s * 0.1, s * 0.22, 0]} rotation={[0, 0, side * 0.45]} raycast={() => null}>
               <boxGeometry args={[s * 0.05, s * 0.38, s * 0.05]} />
               <meshLambertMaterial color={antlerColor} />
             </mesh>
-            <mesh position={[side * s * 0.22, s * 0.38, -s * 0.1]} rotation={[0.3, 0, side * 0.9]} raycast={() => null}>
+            <mesh castShadow position={[side * s * 0.22, s * 0.38, -s * 0.1]} rotation={[0.3, 0, side * 0.9]} raycast={() => null}>
               <boxGeometry args={[s * 0.04, s * 0.22, s * 0.04]} />
               <meshLambertMaterial color={antlerColor} />
             </mesh>
@@ -389,6 +396,7 @@ export function HexTile3D({
   return (
     <group position={[x, 0, z]}>
       <mesh
+        receiveShadow
         rotation={[0, Math.PI / 3, 0]}
         onClick={e => { e.stopPropagation(); onClick() }}
         onPointerOver={onPointerOver}
