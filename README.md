@@ -45,7 +45,12 @@ A turn-based hexagonal grid strategy game. Command units across a procedurally g
 | `Enter` | End turn |
 | `Esc` | Open menu |
 
-Toggle between 2D and 3D using the **2D / 3D** button in the bottom-left corner.
+Toggle between 2D and 3D using the **2D / 3D** button in the bottom-left corner. In 3D mode two additional buttons appear:
+
+| Button | Action |
+|--------|--------|
+| ☀ | Toggle directional sunlight on/off (resets to on each time you enter 3D) |
+| ◐ | Toggle tree/object shadows on/off |
 
 ---
 
@@ -98,7 +103,7 @@ src/
 │   │   └── ...
 │   └── screens/           # Start and end screens
 └── tests/                 # Vitest unit tests (91 tests across 10 suites)
-e2e/                       # Playwright end-to-end tests (29 tests)
+e2e/                       # Playwright end-to-end tests (36 tests)
 ```
 
 ### Game State Flow
@@ -128,6 +133,20 @@ Each terrain type has a procedurally generated canvas texture drawn with a seede
 | Tundra | Snow blobs, olive moss patches, ice-crystal sparkles |
 
 Textures are created once per terrain type and cached for reuse.
+
+### 3D Scene Lighting
+
+The 3D view uses a three-layer lighting model:
+
+- **Ambient light** — low-intensity base fill so surfaces are never fully black
+- **Directional sun light** — positioned at the specular mirror of the camera's default viewpoint, so oasis pools catch a specular highlight when the sun is on. Toggled via the ☀ button.
+- **Shadow map** — 2048×2048 PCFSoft shadow map; trees, palms, rocks, and deer cast shadows onto tile surfaces. Toggled via the ◐ button.
+
+Tree and palm materials use a small emissive fill (≈20% of their base colour) so the camera-facing sides don't go dark under side lighting.
+
+### Oasis (Desert tiles)
+
+Rare desert tiles (~6% chance) spawn an oasis: an organic water pool with border rocks and 1–2 leaning palm trees. The pool uses a `meshStandardMaterial` with `roughness=0` so it acts as a mirror surface, catching a specular highlight from the directional sun.
 
 ### Combat Model
 
