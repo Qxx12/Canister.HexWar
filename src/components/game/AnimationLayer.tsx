@@ -1,8 +1,8 @@
 import { useState, useEffect, useLayoutEffect } from 'react'
-import type { AnimationEvent } from '../../types/animation'
-import type { Board } from '../../types/board'
-import { axialToPixel } from '../../types/hex'
-import { PLAYER_COLORS } from '../../types/player'
+import type { AnimationEvent } from '@hexwar/engine'
+import type { Board } from '@hexwar/engine'
+import { axialToPixel } from '@hexwar/engine'
+import { PLAYER_COLORS } from '@hexwar/engine'
 import styles from './AnimationLayer.module.scss'
 
 interface AnimationLayerProps {

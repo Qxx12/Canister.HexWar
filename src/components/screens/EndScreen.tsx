@@ -1,5 +1,5 @@
-import type { EndGameStats } from '../../types/stats'
-import type { Player } from '../../types/player'
+import type { EndGameStats } from '@hexwar/engine'
+import type { Player } from '@hexwar/engine'
 import { Button } from '../shared/Button'
 import styles from './EndScreen.module.scss'
 

@@ -1,7 +1,7 @@
-import type { Board } from '../types/board'
-import type { PlayerId } from '../types/player'
-import type { OrderMap } from '../types/orders'
-import type { Player } from '../types/player'
+import type { Board } from '@hexwar/engine'
+import type { PlayerId } from '@hexwar/engine'
+import type { OrderMap } from '@hexwar/engine'
+import type { Player } from '@hexwar/engine'
 
 export interface AIStrategy {
   computeOrders(

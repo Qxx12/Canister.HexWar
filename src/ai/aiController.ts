@@ -1,6 +1,6 @@
-import type { Board } from '../types/board'
-import type { PlayerId, Player } from '../types/player'
-import type { OrderMap } from '../types/orders'
+import type { Board } from '@hexwar/engine'
+import type { PlayerId, Player } from '@hexwar/engine'
+import type { OrderMap } from '@hexwar/engine'
 import { GreedyAI } from './greedyAI'
 
 const strategy = new GreedyAI()

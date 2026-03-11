@@ -9,10 +9,10 @@ import {
   executeHumanMoves,
   resolveAiTurn,
 } from '../engine/gameEngine'
-import type { GameState } from '../types/game'
-import type { Board } from '../types/board'
-import type { Player } from '../types/player'
-import type { PlayerStats } from '../types/stats'
+import type { GameState } from '@hexwar/engine'
+import type { Board } from '@hexwar/engine'
+import type { Player } from '@hexwar/engine'
+import type { PlayerStats } from '@hexwar/engine'
 
 function makeBoard(entries: [string, { owner: string | null; units: number }][]): Board {
   const board: Board = new Map()

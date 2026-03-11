@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { checkWin, checkEliminations } from '../engine/winCondition'
-import type { Board, Tile } from '../types/board'
-import type { Player } from '../types/player'
+import { checkWin, checkEliminations } from '@hexwar/engine'
+import type { Board, Tile } from '@hexwar/engine'
+import type { Player } from '@hexwar/engine'
 
 function makeBoard(tiles: Tile[]): Board {
   const board: Board = new Map()

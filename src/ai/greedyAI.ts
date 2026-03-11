@@ -1,8 +1,8 @@
-import type { Board, Tile } from '../types/board'
-import type { PlayerId, Player } from '../types/player'
-import type { OrderMap } from '../types/orders'
+import type { Board, Tile } from '@hexwar/engine'
+import type { PlayerId, Player } from '@hexwar/engine'
+import type { OrderMap } from '@hexwar/engine'
 import type { AIStrategy } from './aiStrategy'
-import { hexNeighbors, hexToKey } from '../types/hex'
+import { hexNeighbors, hexToKey } from '@hexwar/engine'
 
 export class GreedyAI implements AIStrategy {
   computeOrders(

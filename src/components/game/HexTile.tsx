@@ -1,8 +1,8 @@
-import type { Tile } from '../../types/board'
-import type { PlayerId } from '../../types/player'
-import { axialToPixel, hexCorners } from '../../types/hex'
-import { PLAYER_COLORS } from '../../types/player'
-import { TERRAIN_COLORS } from '../../types/board'
+import type { Tile } from '@hexwar/engine'
+import type { PlayerId } from '@hexwar/engine'
+import { axialToPixel, hexCorners } from '@hexwar/engine'
+import { PLAYER_COLORS } from '@hexwar/engine'
+import { TERRAIN_COLORS } from '@hexwar/engine'
 import styles from './HexTile.module.scss'
 
 interface HexTileProps {

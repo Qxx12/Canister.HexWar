@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hexwar-ai"
+version = "0.1.0"
+description = "Machine learning AI for HexWar — evolutionary and neural agents"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.24",
+    "cma>=3.3",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+neural = [
+    "torch>=2.0",
+    "torch_geometric>=2.3",
+    "tensorboard>=2.13",
+    "onnx>=1.14",
+    "onnxruntime>=1.16",
+]
+dev = [
+    "pytest>=7",
+    "pytest-cov>=4",
+    "pytest-xdist>=3",
+    "ruff>=0.4",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hexwar*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short --cov=hexwar --cov-report=term-missing"

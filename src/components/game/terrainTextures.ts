@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { TerrainType } from '../../types/board'
+import type { TerrainType } from '@hexwar/engine'
 
 const SIZE = 256
 

@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import { Html } from '@react-three/drei'
-import type { MovementOrder } from '../../types/orders'
-import type { Board } from '../../types/board'
-import { axialToPixel } from '../../types/hex'
+import type { MovementOrder } from '@hexwar/engine'
+import type { Board } from '@hexwar/engine'
+import { axialToPixel } from '@hexwar/engine'
 import { SURFACE_Y } from './HexTile3D'
 
 const ARROW_Y = SURFACE_Y + 1

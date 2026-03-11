@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { computeAiOrders } from '../ai/aiController'
-import type { Board, Tile } from '../types/board'
-import type { Player } from '../types/player'
+import type { Board, Tile } from '@hexwar/engine'
+import type { Player } from '@hexwar/engine'
 
 function makeBoard(tiles: Tile[]): Board {
   const board: Board = new Map()

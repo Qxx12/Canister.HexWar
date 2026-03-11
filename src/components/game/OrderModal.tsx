@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Modal } from '../shared/Modal'
 import { Button } from '../shared/Button'
-import { UNITS_ALL } from '../../types/orders'
+import { UNITS_ALL } from '@hexwar/engine'
 import styles from './OrderModal.module.scss'
 
 interface OrderModalProps {

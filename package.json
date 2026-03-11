@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -12,7 +15,8 @@
     "test:run": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "gen-fixtures": "tsx packages/engine/scripts/generate-fixtures.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -38,6 +42,7 @@
     "globals": "^17.4.0",
     "jsdom": "^26.1.0",
     "sass": "^1.89.0",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.0",

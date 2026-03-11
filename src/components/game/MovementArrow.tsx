@@ -1,6 +1,6 @@
-import type { MovementOrder } from '../../types/orders'
-import type { Board } from '../../types/board'
-import { axialToPixel } from '../../types/hex'
+import type { MovementOrder } from '@hexwar/engine'
+import type { Board } from '@hexwar/engine'
+import { axialToPixel } from '@hexwar/engine'
 import styles from './MovementArrow.module.scss'
 
 interface MovementArrowProps {

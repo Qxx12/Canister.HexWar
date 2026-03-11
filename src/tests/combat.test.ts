@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { resolveCombat, applyCombatResult } from '../engine/combat'
-import type { Board, Tile } from '../types/board'
+import { resolveCombat, applyCombatResult } from '@hexwar/engine'
+import type { Board, Tile } from '@hexwar/engine'
 
 function makeBoard(tiles: Tile[]): Board {
   const board: Board = new Map()

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { GameState } from '../../types/game'
+import type { GameState } from '@hexwar/engine'
 import { Modal } from '../shared/Modal'
 import { Button } from '../shared/Button'
 import styles from './GameHUD.module.scss'

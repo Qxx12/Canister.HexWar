@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hexNeighbors, hexDistance, hexEquals, hexToKey, keyToHex, axialToPixel, hexCorners } from '../types/hex'
+import { hexNeighbors, hexDistance, hexEquals, hexToKey, keyToHex, axialToPixel, hexCorners } from '@hexwar/engine'
 
 describe('hexNeighbors', () => {
   it('returns 6 neighbors', () => {

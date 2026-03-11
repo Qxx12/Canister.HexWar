@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { resolvePlayerTurn } from '../engine/turnResolver'
-import type { Board, Tile } from '../types/board'
-import type { Player } from '../types/player'
-import type { OrderMap } from '../types/orders'
-import type { PlayerStats } from '../types/stats'
+import { resolvePlayerTurn } from '@hexwar/engine'
+import type { Board, Tile } from '@hexwar/engine'
+import type { Player } from '@hexwar/engine'
+import type { OrderMap } from '@hexwar/engine'
+import type { PlayerStats } from '@hexwar/engine'
 
 function makeBoard(tiles: Tile[]): Board {
   const board: Board = new Map()

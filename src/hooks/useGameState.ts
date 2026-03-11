@@ -1,7 +1,7 @@
 import { useReducer, useCallback } from 'react'
-import type { GameState } from '../types/game'
-import type { MovementOrder } from '../types/orders'
-import type { TurnStep } from '../engine/turnResolver'
+import type { GameState } from '@hexwar/engine'
+import type { MovementOrder } from '@hexwar/engine'
+import type { TurnStep } from '@hexwar/engine'
 import {
   initGame,
   applyHumanOrder,

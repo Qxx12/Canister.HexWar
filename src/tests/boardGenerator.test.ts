@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { generateBoard } from '../engine/boardGenerator'
-import { hexNeighbors, hexToKey } from '../types/hex'
+import { generateBoard } from '@hexwar/engine'
+import { hexNeighbors, hexToKey } from '@hexwar/engine'
 
 const playerIds = ['p0', 'p1', 'p2', 'p3', 'p4', 'p5']
 

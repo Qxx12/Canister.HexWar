@@ -1,5 +1,5 @@
-import type { Tile } from '../../types/board'
-import type { Player } from '../../types/player'
+import type { Tile } from '@hexwar/engine'
+import type { Player } from '@hexwar/engine'
 import styles from './TileTooltip.module.scss'
 
 interface TileTooltipProps {

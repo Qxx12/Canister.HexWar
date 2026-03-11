@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { AnimationEvent } from '../types/animation'
+import type { AnimationEvent } from '@hexwar/engine'
 
 export interface AnimationStep {
   event: AnimationEvent
