@@ -70,21 +70,17 @@ Toggle between 2D and 3D using the **2D / 3D** button in the bottom-left corner.
 ### Project Structure
 
 ```
+packages/
+└── engine/             # @hexwar/engine — shared game logic (npm package)
+    ├── src/
+    │   ├── types/          # Shared type definitions (Board, Player, Orders, etc.)
+    │   └── engine/         # Pure game logic (boardGenerator, combat, turnResolver, …)
+    ├── scripts/
+    │   └── generate-fixtures.ts  # Generate cross-engine parity test fixtures
+    └── fixtures/           # Deterministic game traces (committed; used by Python tests)
 src/
-├── types/          # Shared type definitions
-│   ├── board.ts    # Tile, Board, TerrainType
-│   ├── game.ts     # GameState, GamePhase
-│   ├── hex.ts      # Axial coordinates, neighbor/distance math
-│   ├── orders.ts   # MovementOrder, OrderMap, UNITS_ALL
-│   ├── player.ts   # Player, colors, names
-│   └── ...
-├── engine/         # Pure game logic (no React)
-│   ├── gameEngine.ts      # State transitions, turn management
-│   ├── turnResolver.ts    # Order execution, combat, animation events
-│   ├── boardGenerator.ts  # Procedural map generation
-│   ├── unitGenerator.ts   # Per-turn unit spawning
-│   ├── combat.ts          # Casualty calculation, conquest
-│   └── winCondition.ts    # Elimination and victory checks
+├── engine/             # React-side game engine (imports from @hexwar/engine)
+│   └── gameEngine.ts      # State transitions, turn management
 ├── ai/
 │   ├── greedyAI.ts        # BFS-based frontier routing + attack scoring
 │   └── aiController.ts    # AI order computation entry point
@@ -104,6 +100,7 @@ src/
 │   └── screens/           # Start and end screens
 └── tests/                 # Vitest unit tests (91 tests across 10 suites)
 e2e/                       # Playwright end-to-end tests (36 tests)
+research/                  # Python ML research (engine port + AI agents + PPO training)
 ```
 
 ### Game State Flow
@@ -184,4 +181,5 @@ npm run test         # unit tests (watch mode)
 npm run test:run     # unit tests (once)
 npm run test:e2e     # end-to-end tests (headless, builds first)
 npm run test:e2e:ui  # end-to-end tests with Playwright interactive UI
+npm run gen-fixtures # regenerate Python cross-engine parity fixtures
 ```

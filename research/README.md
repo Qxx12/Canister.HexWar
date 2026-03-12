@@ -65,6 +65,23 @@ The Python engine is a line-by-line port of the TypeScript source in `src/engine
 | Unit generation | `src/engine/unitGenerator.ts` | `hexwar/engine/unit_generator.py` |
 | Win condition | `src/engine/winCondition.ts` | `hexwar/engine/win_condition.py` |
 
+### Cross-engine parity
+
+Deterministic game traces (zero-order play — only unit generation runs) are generated from the TS engine and committed as JSON fixtures:
+
+```bash
+# In monorepo root — regenerate after TS engine changes
+npm run gen-fixtures
+```
+
+The Python test suite replays these fixtures and asserts identical board state after every player turn and unit generation step:
+
+```bash
+uv run pytest tests/test_engine_parity.py
+```
+
+Fixture files live at `packages/engine/fixtures/` and should be committed alongside any TS engine change that affects game logic.
+
 ### Combat model
 
 ```
@@ -254,17 +271,19 @@ The `EloSystem` tracks per-agent Elo ratings using all-pairs comparison from mul
 
 ## Installation
 
+This project lives at `research/` inside the [Canister.HexWar](../) monorepo. It uses [uv](https://docs.astral.sh/uv/) for isolated environment management.
+
 ```bash
-cd hexwar-ai
+cd research
 
-# Core (game engine + greedy + evolutionary)
-pip install -e .
+# Install uv (once)
+brew install uv
 
-# Neural agent (requires PyTorch)
-pip install -e ".[neural]"
+# Create venv and install all dependencies
+uv sync
 
-# Development (tests + linting)
-pip install -e ".[dev]"
+# Neural agent extras (requires PyTorch + torch_geometric)
+uv sync --extra neural
 ```
 
 ### Dependencies
@@ -300,13 +319,13 @@ print(f"Turns played: {result.turns_played}")
 
 ```bash
 # Run tests
-make test
+uv run pytest
 
-# Quick CMA-ES smoke test
-make train-evo-smoke
+# Lint
+uv run ruff check .
 
 # Run tournament
-make tournament
+uv run python scripts/run_tournament.py --games 100
 ```
 
 ---
