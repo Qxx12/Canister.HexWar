@@ -5,8 +5,11 @@ The fitness function runs N games with a candidate weight vector (as a
 GreedyAgent) against a pool of opponents and returns a scalar score.
 
 Design choices:
-  - Opponents: a mix of RandomAgents and a reference GreedyAgent with
-    DEFAULT_WEIGHTS. This prevents overfitting to a single opponent style.
+  - Opponents: 5 greedy agents using DEFAULT_WEIGHTS. All-greedy opposition
+    is a much harder and more discriminating baseline than random opponents —
+    only genuinely better weight vectors win consistently.
+  - Slot rotation: the candidate cycles through all 6 player slots evenly
+    across its N games (game_idx % 6), removing positional bias.
   - Score components (weighted sum):
       win_rate      — fraction of games won (primary signal)
       avg_turns     — lower is better when winning (tiebreak)
@@ -25,8 +28,7 @@ from dataclasses import dataclass
 
 from ...engine.game_engine import HexWarEnv
 from ...engine.types import PLAYER_IDS
-from ..greedy_agent import GreedyAgent
-from ..random_agent import RandomAgent
+from ..greedy_agent import DEFAULT_WEIGHTS, GreedyAgent
 
 
 @dataclass
@@ -48,13 +50,14 @@ def _run_one_game(
     win_weight: float,
     turns_weight: float,
     tiles_weight: float,
+    candidate_slot: int = 0,
 ) -> tuple[float, float, float]:
     """
     Run one game and return (win, turns, tiles_at_end).
     Module-level so it can be pickled by multiprocessing.
     """
-    candidate_id = PLAYER_IDS[0]
-    agents = _build_agents(weights, candidate_id, seed=seed)
+    candidate_id = PLAYER_IDS[candidate_slot]
+    agents = _build_agents(weights, candidate_id)
     env = HexWarEnv(agents=agents, seed=seed, max_turns=max_turns)
     result = env.run()
 
@@ -88,6 +91,7 @@ def evaluate_weights(
         w, t, tl = _run_one_game(
             list(weights), seed_offset + game_idx, max_turns,
             win_weight, turns_weight, tiles_weight,
+            candidate_slot=game_idx % len(PLAYER_IDS),
         )
         wins += w
         turns_total += t
@@ -157,6 +161,7 @@ def evaluate_generation(
                     _run_one_game,
                     list(weights), seed, max_turns,
                     win_weight, turns_weight, tiles_weight,
+                    game_idx % len(PLAYER_IDS),
                 )
                 futures[fut] = cand_idx
 
@@ -188,14 +193,10 @@ def evaluate_generation(
 def _build_agents(
     weights: Sequence[float],
     candidate_id: str,
-    seed: int,
 ) -> dict:
-    """Build the agent dict: candidate vs 3 random + 2 default-greedy."""
+    """Build the agent dict: candidate vs 5 default-greedy opponents."""
     agents = {candidate_id: GreedyAgent(weights=weights)}
-    other_ids = [pid for pid in PLAYER_IDS if pid != candidate_id]
-    for i, pid in enumerate(other_ids):
-        if i < 3:
-            agents[pid] = RandomAgent(seed=seed + i)
-        else:
-            agents[pid] = GreedyAgent()
+    for pid in PLAYER_IDS:
+        if pid != candidate_id:
+            agents[pid] = GreedyAgent(weights=DEFAULT_WEIGHTS)
     return agents

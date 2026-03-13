@@ -131,7 +131,7 @@ Scores each candidate move (source tile → adjacent target) with a linear combi
 
 ### Tier 3: Evolutionary Agent (CMA-ES)
 
-Optimises the Greedy Agent's 8-dimensional weight vector using [CMA-ES](https://arxiv.org/abs/1604.00772) (Covariance Matrix Adaptation Evolution Strategy). Evaluation fitness is the greedy agent's win rate over 60 games against a mixed pool of random + default-greedy opponents, parallelised across CPU cores.
+Optimises the Greedy Agent's 8-dimensional weight vector using [CMA-ES](https://arxiv.org/abs/1604.00772) (Covariance Matrix Adaptation Evolution Strategy). Evaluation fitness is the greedy agent's win rate over 60 games against 5 default-greedy opponents, parallelised across CPU cores. The candidate rotates through all 6 player slots evenly to remove positional bias.
 
 ```bash
 python scripts/train_cmaes.py --generations 200 --games 20 --output runs/cmaes
