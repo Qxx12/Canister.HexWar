@@ -132,6 +132,39 @@ describe('useViewport — post-pinch pan', () => {
   })
 })
 
+describe('useViewport — mouse button handling', () => {
+  it('pans with RMB (button 2) on mouse', () => {
+    const { result } = renderHook(() => useViewport())
+    act(() => result.current.centerBoard(500, 500))
+    const startX = result.current.viewport.panX
+
+    act(() => result.current.onPointerDown(makePointer(1, 100, 100, { button: 2, pointerType: 'mouse' })))
+    act(() => result.current.onPointerMove(makePointer(1, 110, 100, { button: 2, pointerType: 'mouse' })))
+    act(() => result.current.onPointerMove(makePointer(1, 130, 100, { button: 2, pointerType: 'mouse' })))
+
+    expect(result.current.viewport.panX).toBeGreaterThan(startX)
+  })
+
+  it('does not pan with LMB (button 0) on mouse', () => {
+    const { result } = renderHook(() => useViewport())
+    act(() => result.current.centerBoard(500, 500))
+    const startX = result.current.viewport.panX
+
+    act(() => result.current.onPointerDown(makePointer(1, 100, 100, { button: 0, pointerType: 'mouse' })))
+    act(() => result.current.onPointerMove(makePointer(1, 150, 100, { button: 0, pointerType: 'mouse' })))
+
+    expect(result.current.viewport.panX).toBe(startX)
+  })
+
+  it('onContextMenu calls preventDefault', () => {
+    const { result } = renderHook(() => useViewport())
+    let prevented = false
+    const fakeEvent = { preventDefault: () => { prevented = true } } as unknown as React.MouseEvent
+    act(() => result.current.onContextMenu(fakeEvent))
+    expect(prevented).toBe(true)
+  })
+})
+
 describe('useViewport — pinch zoom', () => {
   it('zooms in when fingers spread apart', () => {
     const { result } = renderHook(() => useViewport())

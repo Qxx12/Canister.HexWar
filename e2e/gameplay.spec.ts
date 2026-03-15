@@ -210,6 +210,49 @@ test.describe('Sun and shadow toggles', () => {
   })
 })
 
+// ─── Viewport panning ────────────────────────────────────────────────────────
+
+test.describe('Viewport panning', () => {
+  test.beforeEach(async ({ page }) => {
+    await startGame(page)
+  })
+
+  test('RMB drag pans the board', async ({ page }) => {
+    const transform = page.locator('div[style*="translate"]')
+    const before = await transform.getAttribute('style')
+
+    await page.mouse.move(400, 300)
+    await page.mouse.down({ button: 'right' })
+    await page.mouse.move(500, 300)
+    await page.mouse.move(600, 300)
+    await page.mouse.up({ button: 'right' })
+
+    const after = await transform.getAttribute('style')
+    expect(after).not.toBe(before)
+  })
+
+  test('LMB drag does not pan the board', async ({ page }) => {
+    const transform = page.locator('div[style*="translate"]')
+    const before = await transform.getAttribute('style')
+
+    // Drag over an area unlikely to have tiles (top-left corner)
+    await page.mouse.move(50, 50)
+    await page.mouse.down({ button: 'left' })
+    await page.mouse.move(250, 50)
+    await page.mouse.up({ button: 'left' })
+
+    const after = await transform.getAttribute('style')
+    expect(after).toBe(before)
+  })
+
+  test('right-click does not open a context menu', async ({ page }) => {
+    await page.mouse.click(400, 300, { button: 'right' })
+    await page.waitForTimeout(200)
+    // Game still running normally — no native menu, HUD still visible
+    await expect(page.getByText('Turn 1')).toBeVisible()
+  })
+})
+
 // ─── Retire / End screen ─────────────────────────────────────────────────────
 
 test.describe('Retire flow', () => {

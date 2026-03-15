@@ -71,8 +71,12 @@ export function useViewport() {
     setViewport(v => zoomToward(v, v.zoom * factor, cx, cy, w, h))
   }, [])
 
+  const onContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+  }, [])
+
   const onPointerDown = useCallback((e: React.PointerEvent) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return
+    if (e.button !== 2 && e.pointerType === 'mouse') return
     activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
     if (activePointers.current.size === 1) {
@@ -174,5 +178,5 @@ export function useViewport() {
     lastPinchMid.current = null
   }, [])
 
-  return { viewport, centerBoard, resetViewport, onWheel, onPointerDown, onPointerMove, onPointerUp, onPointerCancel }
+  return { viewport, centerBoard, resetViewport, onWheel, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onContextMenu }
 }
