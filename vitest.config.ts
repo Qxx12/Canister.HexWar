@@ -10,6 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@hexwar/engine': path.resolve(__dirname, 'packages/engine/src/index.ts'),
+      '@hexwar/strategy': path.resolve(__dirname, 'packages/strategy/src/index.ts'),
     },
   },
   test: {

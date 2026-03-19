@@ -210,6 +210,57 @@ test.describe('Sun and shadow toggles', () => {
   })
 })
 
+// ─── AI behaviour ────────────────────────────────────────────────────────────
+
+test.describe('AI behaviour', () => {
+  test.beforeEach(async ({ page }) => {
+    await startGame(page)
+  })
+
+  test('unit counts on human tiles change after AI resolves their turn', async ({ page }) => {
+    const before = await getTileInfo(page)
+    const humanBefore = before.filter(t => t.isHuman)
+    const totalBefore = humanBefore.reduce((s, t) => s + t.units, 0)
+
+    await page.getByTitle('End Turn').click()
+    await expect(page.getByText('Turn 2')).toBeVisible({ timeout: 15_000 })
+
+    const after = await getTileInfo(page)
+    const humanAfter = after.filter(t => t.isHuman)
+    const totalAfter = humanAfter.reduce((s, t) => s + t.units, 0)
+
+    // Unit generation gives at least +1 per tile per round; even under attack
+    // the total change must be non-zero (tiles gained units or were lost to AI).
+    expect(totalAfter).not.toBe(totalBefore)
+  })
+
+  test('game survives three full turns without crashing', async ({ page }) => {
+    for (let i = 0; i < 3; i++) {
+      await page.getByTitle('End Turn').click()
+      await expect(page.getByTitle('End Turn')).toBeEnabled({ timeout: 15_000 })
+    }
+    await expect(page.getByText('Turn 4')).toBeVisible()
+  })
+})
+
+// ─── Restart cleanliness ──────────────────────────────────────────────────────
+
+test.describe('Restart cleanliness', () => {
+  test('game restarts cleanly and AI resolves turn after restart', async ({ page }) => {
+    await startGame(page)
+    // Play one turn then retire
+    await page.getByTitle('Menu').click()
+    await page.getByRole('button', { name: 'Retire' }).click()
+    await page.getByRole('button', { name: 'Back to Menu' }).click()
+    // Start a fresh game
+    await startGame(page)
+    await expect(page.getByText('Turn 1')).toBeVisible()
+    // End turn — AI must resolve without error (no history bleed from old session)
+    await page.getByTitle('End Turn').click()
+    await expect(page.getByText('Turn 2')).toBeVisible({ timeout: 15_000 })
+  })
+})
+
 // ─── Viewport panning ────────────────────────────────────────────────────────
 
 test.describe('Viewport panning', () => {

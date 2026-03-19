@@ -9,6 +9,7 @@ import { GameHUD } from './components/game/GameHUD'
 import { StartScreen } from './components/screens/StartScreen'
 import { EndScreen } from './components/screens/EndScreen'
 import type { MovementOrder, Board, TurnStep } from '@hexwar/engine'
+import { resetAiAgents } from './ai/aiController'
 import './styles/main.scss'
 
 type AppScreen = 'start' | 'game' | 'end'
@@ -47,6 +48,7 @@ export default function App() {
 
   const handleRestart = useCallback(() => {
     resetGame()
+    resetAiAgents()
     clearQueue()
     setDisplayBoard(null)
     setSnapshotBoard(null)

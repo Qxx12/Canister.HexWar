@@ -29,8 +29,8 @@ A turn-based hexagonal grid strategy game. Command units across a procedurally g
 
 | Input | Action |
 |-------|--------|
-| Click tile | Select / set order destination |
-| Drag | Pan the board |
+| Left-click tile | Select / set order destination |
+| Right-drag | Pan the board |
 | Scroll / Pinch | Zoom |
 | `Enter` | End turn |
 | `Esc` | Open menu |
@@ -71,19 +71,25 @@ Toggle between 2D and 3D using the **2D / 3D** button in the bottom-left corner.
 
 ```
 packages/
-└── engine/             # @hexwar/engine — shared game logic (npm package)
-    ├── src/
-    │   ├── types/          # Shared type definitions (Board, Player, Orders, etc.)
-    │   └── engine/         # Pure game logic (boardGenerator, combat, turnResolver, …)
-    ├── scripts/
-    │   └── generate-fixtures.ts  # Generate cross-engine parity test fixtures
-    └── fixtures/           # Deterministic game traces (committed; used by Python tests)
+├── engine/             # @hexwar/engine — shared game logic (npm package)
+│   ├── src/
+│   │   ├── types/          # Shared type definitions (Board, Player, Orders, etc.)
+│   │   └── engine/         # Pure game logic (boardGenerator, combat, turnResolver, …)
+│   ├── scripts/
+│   │   └── generate-fixtures.ts  # Generate cross-engine parity test fixtures
+│   └── fixtures/           # Deterministic game traces (committed; used by Python tests)
+└── strategy/           # @hexwar/strategy — hierarchical AI (npm package)
+    └── src/
+        ├── assessor/       # Geopolitical snapshot + momentum history
+        ├── strategies/     # Strategy catalog (threat, opportunism, alliance, consolidation)
+        ├── operational/    # Front mask + interior unit routing
+        ├── tactical/       # Constrained greedy order generation
+        └── highCommand.ts  # HighCommandAI — wires all four layers
 src/
 ├── engine/             # React-side game engine (imports from @hexwar/engine)
 │   └── gameEngine.ts      # State transitions, turn management
 ├── ai/
-│   ├── greedyAI.ts        # BFS-based frontier routing + attack scoring
-│   └── aiController.ts    # AI order computation entry point
+│   └── aiController.ts    # Per-player HighCommandAI instances; reset on game restart
 ├── hooks/
 │   ├── useGameState.ts    # Reducer-based game state management
 │   ├── useViewport.ts     # Pan/zoom with pointer and pinch support
@@ -98,8 +104,8 @@ src/
 │   │   ├── terrainTextures.ts     # Procedural canvas textures per terrain type
 │   │   └── ...
 │   └── screens/           # Start and end screens
-└── tests/                 # Vitest unit tests (91 tests across 10 suites)
-e2e/                       # Playwright end-to-end tests (36 tests)
+└── tests/                 # Vitest unit tests (117 tests across 12 suites)
+e2e/                       # Playwright end-to-end tests (39 tests)
 research/                  # Python ML research (engine port + AI agents + PPO training)
 ```
 
@@ -157,16 +163,42 @@ Orders use the **initial board snapshot** at turn start — units that arrive at
 
 ### AI Strategy
 
-The AI runs a two-phase decision per turn:
+The AI uses a four-layer hierarchical architecture (`@hexwar/strategy`):
 
-1. **Classify tiles** — frontier (adjacent to non-friendly) vs interior
-2. **BFS routing map** — from all frontier tiles inward; each interior tile records its next step toward the nearest border
-3. **Frontier tiles** evaluate attack targets scored by:
-   - Neutral tile: 35
-   - Winnable enemy: 50 + advantage × 3
-   - Enemy capital bonus: +45
-   - Losing fight: −1 (skipped), unless enemy capital (18)
-4. **Interior tiles** send all units toward the front via the routing map, creating a reinforcement pipeline
+```
+GeopoliticalSnapshot → StrategicPlan → TileConstraints → OrderMap
+      (assessor)         (strategies)     (operational)   (tactical)
+```
+
+**Strategic layer — High Command**
+Reads the board once and produces a `FrontDirective` per neighboring player. Each directive carries a `stance` and a unit budget fraction:
+
+| Stance | Meaning |
+|--------|---------|
+| `INVADE` | Full offensive — commit everything |
+| `EXPAND` | Push forward when advantageous |
+| `HOLD` | Defend; route surplus to other fronts |
+| `DETER` | Mass units here to discourage invasion |
+| `IGNORE` | Issue no orders toward this neighbor |
+
+**Strategy catalog** (applied in priority order, higher wins):
+
+| Group | Strategies |
+|-------|-----------|
+| Opportunism | Collapse Exploitation (priority 10), Wounded Enemy (6), Vulture Strike (5), Distraction Exploit (5) |
+| Alliance | Common Enemy (4), Don't Finish the Decoy (3) |
+| Threat | Deterrence Wall (4), Flanking Deterrent (3) |
+| Consolidation | Turtle Mode (7 — defensive override) |
+
+A **two-front cap** in the registry limits simultaneous offensive fronts to prevent unit overcommitment.
+
+**Operational layer**
+Translates directives into per-tile `TileConstraint` objects. DETER tiles accumulate units in place; interior tiles are BFS-routed toward active fronts through friendly territory.
+
+**Tactical layer**
+Greedy scorer that operates only within the allowed targets and unit budgets. Uses the same scoring heuristics as the original `GreedyAI` (neutral: 35, winnable enemy: 50 + advantage × 3, capital bonus: +45), but over a much smaller search space.
+
+See [`packages/strategy/README.md`](packages/strategy/README.md) for the full design and extension guide.
 
 ---
 
