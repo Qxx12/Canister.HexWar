@@ -96,10 +96,27 @@ describe('buildFrontMask — DETER neighbor', () => {
     const mask = buildFrontMask(board, 'p0', plan)
     expect(mask.has('0,0')).toBe(false)
   })
+
+  it('DETER tile adjacent to a neutral tile still has budget=0 (neutral cannot override DETER)', () => {
+    // Key regression: neutral tile must NOT set crossBorderAllowed on a DETER frontier
+    const board = makeBoard([
+      makeTile(-1, 0, 'p0', 3),  // friendly — ensures constraint is created
+      makeTile(0, 0, 'p0', 5),   // frontier: DETER on p1, neutral on the other side
+      makeTile(1, 0, 'p1', 8),   // strong enemy — DETER
+      makeTile(0, 1, null, 0),   // neutral neighbour
+    ])
+    const plan = makePlan({ p1: { stance: 'DETER', unitBudgetFraction: 0.9 } })
+    const mask = buildFrontMask(board, 'p0', plan)
+    const c = mask.get('0,0')!
+    expect(c.crossBorderAllowed).toBe(false)
+    expect(c.maxUnitsFraction).toBe(0)
+    // Neutral is in allowedTargetKeys for interior routing, but crossing is forbidden
+    expect(c.allowedTargetKeys).not.toContain('1,0')
+  })
 })
 
 describe('buildFrontMask — HOLD neighbor', () => {
-  it('does not allow crossing but keeps full interior routing budget', () => {
+  it('does not allow crossing but keeps full interior routing budget (no neutral)', () => {
     const board = makeBoard([
       makeTile(-1, 0, 'p0', 3),  // friendly interior — ensures constraint is created
       makeTile(0, 0, 'p0', 5),
@@ -111,6 +128,22 @@ describe('buildFrontMask — HOLD neighbor', () => {
     expect(c.crossBorderAllowed).toBe(false)
     expect(c.allowedTargetKeys).not.toContain('1,0')
     expect(c.maxUnitsFraction).toBe(1.0)
+  })
+
+  it('HOLD + adjacent neutral: allows crossing but uses conservative budget (0.5)', () => {
+    // Defensive tile should expand into neutral, but not drain itself completely
+    const board = makeBoard([
+      makeTile(0, 0, 'p0', 5),   // frontier facing p1 (HOLD) and neutral
+      makeTile(1, 0, 'p1', 4),   // HOLD enemy
+      makeTile(0, 1, null, 0),   // neutral expansion target
+    ])
+    const plan = makePlan({ p1: { stance: 'HOLD', unitBudgetFraction: 0.7 } })
+    const mask = buildFrontMask(board, 'p0', plan)
+    const c = mask.get('0,0')!
+    expect(c.crossBorderAllowed).toBe(true)
+    expect(c.allowedTargetKeys).toContain('0,1')   // neutral is a valid target
+    expect(c.allowedTargetKeys).not.toContain('1,0') // enemy tile is not
+    expect(c.maxUnitsFraction).toBeCloseTo(0.5)
   })
 })
 
@@ -184,6 +217,96 @@ describe('buildFrontMask — zero-unit tiles', () => {
     const plan = makePlan({ p1: { stance: 'INVADE', unitBudgetFraction: 0.9 } })
     const mask = buildFrontMask(board, 'p0', plan)
     expect(mask.has('0,0')).toBe(false)
+  })
+})
+
+describe('buildFrontMask — OFFENSIVE + neutral budget', () => {
+  it('INVADE + adjacent neutral: budget = max(directive, 1.0) = 1.0', () => {
+    // Neutral tiles are free — when already in attack mode, grab them at full budget
+    const board = makeBoard([
+      makeTile(0, 0, 'p0', 10),
+      makeTile(1, 0, 'p1', 3),   // INVADE enemy
+      makeTile(0, 1, null, 0),   // neutral — adjacent
+    ])
+    const plan = makePlan({ p1: { stance: 'INVADE', unitBudgetFraction: 0.7 } })
+    const mask = buildFrontMask(board, 'p0', plan)
+    const c = mask.get('0,0')!
+    expect(c.crossBorderAllowed).toBe(true)
+    expect(c.maxUnitsFraction).toBeCloseTo(1.0)  // max(0.7, 1.0)
+    expect(c.allowedTargetKeys).toContain('1,0')
+    expect(c.allowedTargetKeys).toContain('0,1')
+  })
+
+  it('INVADE + neutral where directive budget >= 1.0 uses directive budget', () => {
+    const board = makeBoard([
+      makeTile(0, 0, 'p0', 10),
+      makeTile(1, 0, 'p1', 3),
+      makeTile(0, 1, null, 0),
+    ])
+    const plan = makePlan({ p1: { stance: 'INVADE', unitBudgetFraction: 0.9 } })
+    const mask = buildFrontMask(board, 'p0', plan)
+    const c = mask.get('0,0')!
+    // max(0.9, 1.0) = 1.0 — neutral still raises it to 1.0
+    expect(c.maxUnitsFraction).toBeCloseTo(1.0)
+  })
+})
+
+describe('buildFrontMask — multi-stance interactions', () => {
+  it('INVADE neighbor dominates over HOLD neighbor', () => {
+    const board = makeBoard([
+      makeTile(0, 0, 'p0', 10),
+      makeTile(1, 0, 'p1', 5),   // INVADE
+      makeTile(0, 1, 'p2', 4),   // HOLD
+    ])
+    const plan = makePlan({
+      p1: { stance: 'INVADE', unitBudgetFraction: 0.9 },
+      p2: { stance: 'HOLD', unitBudgetFraction: 0.7 },
+    })
+    const mask = buildFrontMask(board, 'p0', plan)
+    const c = mask.get('0,0')!
+    expect(c.crossBorderAllowed).toBe(true)
+    expect(c.maxUnitsFraction).toBeCloseTo(0.9)  // INVADE budget
+    expect(c.allowedTargetKeys).toContain('1,0')  // INVADE target in
+    expect(c.allowedTargetKeys).not.toContain('0,1')  // HOLD target excluded
+  })
+
+  it('EXPAND neighbor dominates when a DETER neighbor is also present', () => {
+    // The tile can still cross to the EXPAND target; DETER target is excluded
+    const board = makeBoard([
+      makeTile(-1, 0, 'p0', 3),  // friendly — ensures constraint
+      makeTile(0, 0, 'p0', 10),
+      makeTile(1, 0, 'p1', 5),   // DETER — stays put
+      makeTile(0, 1, 'p2', 2),   // EXPAND — attack here
+    ])
+    const plan = makePlan({
+      p1: { stance: 'DETER', unitBudgetFraction: 0.8 },
+      p2: { stance: 'EXPAND', unitBudgetFraction: 0.75 },
+    })
+    const mask = buildFrontMask(board, 'p0', plan)
+    const c = mask.get('0,0')!
+    expect(c.crossBorderAllowed).toBe(true)   // EXPAND wins
+    expect(c.maxUnitsFraction).toBeCloseTo(0.75)
+    expect(c.allowedTargetKeys).toContain('0,1')   // EXPAND target in
+    expect(c.allowedTargetKeys).not.toContain('1,0') // DETER target excluded
+  })
+
+  it('two HOLD neighbors + neutral uses 0.5 budget', () => {
+    const board = makeBoard([
+      makeTile(0, 0, 'p0', 8),
+      makeTile(1, 0, 'p1', 3),   // HOLD
+      makeTile(0, 1, 'p2', 3),   // HOLD
+      makeTile(-1, 0, null, 0),  // neutral — hexNeighbors of (0,0)
+    ])
+    const plan = makePlan({
+      p1: { stance: 'HOLD', unitBudgetFraction: 0.7 },
+      p2: { stance: 'HOLD', unitBudgetFraction: 0.7 },
+    })
+    const mask = buildFrontMask(board, 'p0', plan)
+    const c = mask.get('0,0')!
+    expect(c.crossBorderAllowed).toBe(true)
+    expect(c.maxUnitsFraction).toBeCloseTo(0.5)
+    expect(c.allowedTargetKeys).toContain('-1,0')  // neutral reachable
+    expect(c.allowedTargetKeys).not.toContain('1,0')  // HOLD enemy excluded
   })
 })
 

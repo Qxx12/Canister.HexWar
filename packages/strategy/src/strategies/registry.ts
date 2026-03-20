@@ -7,10 +7,10 @@ export type StrategyFn = (snapshot: GeopoliticalSnapshot) => PartialDirective[]
 function defaultDirective(neighborId: PlayerId): FrontDirective {
   return {
     neighborId,
-    stance: 'HOLD',
-    unitBudgetFraction: 0.7,
+    stance: 'EXPAND',
+    unitBudgetFraction: 0.75,
     priority: 1,
-    rationale: 'default-hold',
+    rationale: 'default-expand',
   }
 }
 

@@ -5,13 +5,17 @@ import type { StrategicPlan, TileConstraint } from '../types.ts'
 /**
  * Translates a StrategicPlan into per-tile constraints for the tactical layer.
  *
- * For each owned tile:
- *  - Friendly neighbor targets are always allowed (interior routing).
- *  - Neutral targets are allowed when neutralExpansionEnabled.
- *  - Enemy targets are allowed only when the directive stance is EXPAND or INVADE.
- *  - DETER tiles accumulate units by setting maxUnitsFraction = 0 (no orders).
- *  - HOLD tiles can route half their units toward active fronts via interior moves.
- *  - IGNORE neighbors are excluded from allowedTargetKeys entirely.
+ * For each owned tile we separately track:
+ *  - hasOffensiveCrossing: an INVADE or EXPAND enemy is adjacent
+ *  - hasDeterEnemy: a DETER enemy is adjacent (accumulate here, never cross)
+ *  - hasHoldEnemy: a HOLD enemy is adjacent
+ *  - hasNeutralTarget: a neutral tile is adjacent (with neutralExpansionEnabled)
+ *
+ * Resolution priority:
+ *  1. Offensive (INVADE/EXPAND) → crossBorderAllowed, directive budget (neutral is free on top)
+ *  2. DETER → never cross, budget=0 — even if neutral tiles are adjacent
+ *  3. Neutral only (HOLD or no enemies) → cross, 0.5 budget when facing HOLD enemy, 1.0 otherwise
+ *  4. Interior / HOLD frontier with no neutral → no crossing, budget=1.0 for interior routing
  */
 export function buildFrontMask(
   board: Board,
@@ -24,10 +28,11 @@ export function buildFrontMask(
     if (tile.owner !== myPlayerId || tile.units === 0) continue
 
     const allowedTargetKeys: string[] = []
-    let crossBorderAllowed = false
-    let bestOffensiveBudget = 0
-    let facingDeterOnly = false
-    let facingAnyEnemy = false
+    let hasNeutralTarget = false
+    let hasOffensiveCrossing = false
+    let hasDeterEnemy = false
+    let hasHoldEnemy = false
+    let offensiveBudget = 0
 
     for (const nCoord of hexNeighbors(tile.coord)) {
       const nKey = hexToKey(nCoord)
@@ -35,7 +40,7 @@ export function buildFrontMask(
       if (!nTile) continue
 
       if (nTile.owner === myPlayerId) {
-        // Always include friendly tiles for interior routing
+        // Always allow friendly tiles for interior routing
         allowedTargetKeys.push(nKey)
         continue
       }
@@ -43,8 +48,7 @@ export function buildFrontMask(
       if (nTile.owner === null) {
         if (plan.neutralExpansionEnabled) {
           allowedTargetKeys.push(nKey)
-          crossBorderAllowed = true
-          bestOffensiveBudget = Math.max(bestOffensiveBudget, 0.8)
+          hasNeutralTarget = true
         }
         continue
       }
@@ -53,40 +57,47 @@ export function buildFrontMask(
       const directive = plan.directives.get(nTile.owner)
       if (!directive) continue
 
-      facingAnyEnemy = true
-
       switch (directive.stance) {
         case 'INVADE':
         case 'EXPAND':
           allowedTargetKeys.push(nKey)
-          crossBorderAllowed = true
-          bestOffensiveBudget = Math.max(bestOffensiveBudget, directive.unitBudgetFraction)
-          facingDeterOnly = false
+          hasOffensiveCrossing = true
+          offensiveBudget = Math.max(offensiveBudget, directive.unitBudgetFraction)
           break
         case 'DETER':
-          // Don't cross — hold position. Mark so we can set budget = 0.
-          if (!crossBorderAllowed) facingDeterOnly = true
+          hasDeterEnemy = true
           break
         case 'HOLD':
-          // Don't attack this turn; allow interior routing through
-          facingDeterOnly = false
+          hasHoldEnemy = true
           break
         case 'IGNORE':
-          // Exclude this neighbor's tiles from targets entirely
+          // Excluded from targets entirely
           break
       }
     }
 
-    // Determine unit budget for this tile
+    // Resolve crossing permission and unit budget
+    let crossBorderAllowed: boolean
     let maxUnitsFraction: number
-    if (crossBorderAllowed) {
-      // Offensive tile — spend up to the strategic budget
-      maxUnitsFraction = bestOffensiveBudget
-    } else if (facingAnyEnemy && facingDeterOnly) {
-      // Pure deterrence tile — hold all units here (no outgoing orders)
+
+    if (hasOffensiveCrossing) {
+      // Offensive front — attack enemies; also grab adjacent neutrals for free
+      crossBorderAllowed = true
+      maxUnitsFraction = hasNeutralTarget
+        ? Math.max(offensiveBudget, 1.0)
+        : offensiveBudget
+    } else if (hasDeterEnemy) {
+      // DETER: accumulate units here — do NOT cross even if neutral tiles are adjacent
+      crossBorderAllowed = false
       maxUnitsFraction = 0
+    } else if (hasNeutralTarget) {
+      // HOLD frontier or interior facing neutral targets — expand, but conservatively
+      // when we have a defensive obligation against a HOLD enemy
+      crossBorderAllowed = true
+      maxUnitsFraction = hasHoldEnemy ? 0.5 : 1.0
     } else {
-      // Interior or HOLD frontier — can route units toward active fronts
+      // Interior or HOLD frontier with no neutral — route toward active fronts
+      crossBorderAllowed = false
       maxUnitsFraction = 1.0
     }
 

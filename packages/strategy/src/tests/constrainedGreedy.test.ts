@@ -75,6 +75,16 @@ describe('computeConstrainedOrders — enemy target', () => {
     expect(orders.has('0,0')).toBe(false)
   })
 
+  it('skips an enemy tile when unit counts are tied (score = -1)', () => {
+    const board = makeBoard([
+      makeTile(0, 0, 'p0', 5),
+      makeTile(1, 0, 'p1', 5),  // tied — scoreTarget returns -1
+    ])
+    const constraints = new Map([['0,0', makeConstraint('0,0', ['1,0'])]])
+    const orders = computeConstrainedOrders(board, 'p0', players, constraints, new Map())
+    expect(orders.has('0,0')).toBe(false)
+  })
+
   it('attacks an enemy start tile even at a disadvantage', () => {
     const board = makeBoard([
       makeTile(0, 0, 'p0', 2),
@@ -156,25 +166,48 @@ describe('computeConstrainedOrders — interior routing', () => {
 })
 
 describe('computeConstrainedOrders — capital garrison', () => {
-  it('keeps MIN_CAPITAL_GARRISON (2) units on own start tile', () => {
+  it('keeps MIN_CAPITAL_GARRISON (1) unit on own start tile when attacking an enemy', () => {
     const board = makeBoard([
       makeTile(0, 0, 'p0', 5, { isStartTile: true, startOwner: 'p0' }),
-      makeTile(1, 0, null, 0),
+      makeTile(1, 0, 'p1', 2),  // enemy tile — garrison applies
     ])
-    const constraints = new Map([['0,0', makeConstraint('0,0', ['1,0'])]])
+    const constraints = new Map([['0,0', makeConstraint('0,0', ['1,0'], { crossBorderAllowed: true })]])
     const orders = computeConstrainedOrders(board, 'p0', players, constraints, new Map())
-    // maxSend = 5 - 2 = 3
-    expect(orders.get('0,0')!.requestedUnits).toBe(3)
+    // unitsToSend(5, enemy2) = max(3, floor(5*0.85)=4) = 4; maxSend = 5-1 = 4 → no clamp
+    expect(orders.get('0,0')!.requestedUnits).toBe(4)
   })
 
-  it('deletes the order entirely when only MIN_CAPITAL_GARRISON units exist', () => {
+  it('deletes the order entirely when only MIN_CAPITAL_GARRISON units exist and target is an enemy', () => {
+    // Garrison applies to enemy targets only — 1 unit vs enemy, keep the unit
     const board = makeBoard([
-      makeTile(0, 0, 'p0', 2, { isStartTile: true, startOwner: 'p0' }),
-      makeTile(1, 0, null, 0),
+      makeTile(0, 0, 'p0', 1, { isStartTile: true, startOwner: 'p0' }),
+      makeTile(1, 0, 'p1', 0),  // enemy tile (owner !== null)
+    ])
+    const constraints = new Map([['0,0', makeConstraint('0,0', ['1,0'], { crossBorderAllowed: true })]])
+    const orders = computeConstrainedOrders(board, 'p0', players, constraints, new Map())
+    expect(orders.has('0,0')).toBe(false)
+  })
+
+  it('garrison is skipped when the target is a neutral tile (no counter-attack risk)', () => {
+    // Even with only 1 unit, the capital can send it to a neutral tile
+    const board = makeBoard([
+      makeTile(0, 0, 'p0', 1, { isStartTile: true, startOwner: 'p0' }),
+      makeTile(1, 0, null, 0),  // neutral — no counter-attack
     ])
     const constraints = new Map([['0,0', makeConstraint('0,0', ['1,0'])]])
     const orders = computeConstrainedOrders(board, 'p0', players, constraints, new Map())
-    expect(orders.has('0,0')).toBe(false)
+    expect(orders.get('0,0')!.requestedUnits).toBe(1)
+  })
+
+  it('start tile with 2 units vs enemy: sends 1, keeps 1 garrison', () => {
+    const board = makeBoard([
+      makeTile(0, 0, 'p0', 2, { isStartTile: true, startOwner: 'p0' }),
+      makeTile(1, 0, 'p1', 0),  // enemy with 0 units — we can win
+    ])
+    const constraints = new Map([['0,0', makeConstraint('0,0', ['1,0'], { crossBorderAllowed: true })]])
+    const orders = computeConstrainedOrders(board, 'p0', players, constraints, new Map())
+    // maxSend = 2-1 = 1; unitsToSend(1, enemy0) = max(1, 0) = 1
+    expect(orders.get('0,0')!.requestedUnits).toBe(1)
   })
 
   it('does not apply garrison to a non-start tile', () => {

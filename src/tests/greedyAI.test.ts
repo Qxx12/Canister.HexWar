@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { GreedyAI } from '../ai/greedyAI'
+import { GreedyAI } from '@hexwar/greedy'
 import type { Board, Tile } from '@hexwar/engine'
 import type { Player } from '@hexwar/engine'
 

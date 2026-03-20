@@ -1,8 +1,8 @@
-import type { Board, PlayerId, Player, OrderMap, Tile } from '@hexwar/engine'
-import { hexToKey } from '@hexwar/engine'
+import type { Board, PlayerId, Player, OrderMap } from '@hexwar/engine'
+import { scoreTarget, unitsToSend } from '@hexwar/greedy'
 import type { TileConstraint } from '../types.ts'
 
-const MIN_CAPITAL_GARRISON = 2
+const MIN_CAPITAL_GARRISON = 1
 
 /**
  * Greedy tactical layer that operates within the operational constraints
@@ -71,35 +71,21 @@ export function computeConstrainedOrders(
   return orders
 }
 
-function scoreTarget(myUnits: number, target: Tile): number {
-  const startBonus = target.isStartTile ? 45 : 0
-
-  if (target.owner === null) {
-    return 35 + startBonus
-  }
-
-  const advantage = myUnits - target.units
-  if (advantage <= 0) {
-    return target.isStartTile ? 18 : -1
-  }
-
-  return 50 + advantage * 3 + startBonus
-}
-
-function unitsToSend(myUnits: number, target: Tile): number {
-  if (target.owner === null) return myUnits
-  if (myUnits <= target.units) return myUnits
-  const minToConquer = target.units + 1
-  return Math.min(myUnits, Math.max(minToConquer, Math.floor(myUnits * 0.85)))
-}
-
-/** Ensures the player's own start tile always keeps a minimum garrison. */
+/**
+ * Ensures the player's own start tile always keeps a minimum garrison against
+ * enemy attack. Skipped for neutral targets — they cannot counter-attack, so
+ * there is no defensive reason to hold units back.
+ */
 function enforceCapitalGarrison(board: Board, playerId: PlayerId, orders: OrderMap): void {
   for (const [key, tile] of board) {
     if (tile.owner !== playerId || !tile.isStartTile || tile.startOwner !== playerId) continue
 
     const order = orders.get(key)
     if (!order) continue
+
+    // Neutral tiles have 0 defenders — no garrison needed
+    const targetTile = board.get(order.toKey)
+    if (targetTile && targetTile.owner === null) continue
 
     const maxSend = tile.units - MIN_CAPITAL_GARRISON
     if (maxSend <= 0) {
@@ -114,5 +100,3 @@ function enforceCapitalGarrison(board: Board, playerId: PlayerId, orders: OrderM
   }
 }
 
-// Re-export for consumers that need the key utility
-export { hexToKey }

@@ -20,6 +20,7 @@
     "baseUrl": ".",
     "paths": {
       "@hexwar/engine": ["./packages/engine/src/index.ts"],
+      "@hexwar/greedy": ["./packages/greedy/src/index.ts"],
       "@hexwar/strategy": ["./packages/strategy/src/index.ts"]
     },
 

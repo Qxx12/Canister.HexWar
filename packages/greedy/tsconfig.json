@@ -12,8 +12,7 @@
     "noUnusedParameters": true,
     "skipLibCheck": true,
     "paths": {
-      "@hexwar/engine": ["../engine/src/index.ts"],
-      "@hexwar/greedy": ["../greedy/src/index.ts"]
+      "@hexwar/engine": ["../engine/src/index.ts"]
     }
   },
   "include": ["src"]

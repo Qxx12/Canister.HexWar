@@ -78,12 +78,17 @@ packages/
 │   ├── scripts/
 │   │   └── generate-fixtures.ts  # Generate cross-engine parity test fixtures
 │   └── fixtures/           # Deterministic game traces (committed; used by Python tests)
+├── greedy/             # @hexwar/greedy — standalone GreedyAI + shared scoring (npm package)
+│   └── src/
+│       ├── scoring.ts      # scoreTarget / unitsToSend (shared with @hexwar/strategy)
+│       ├── greedyAI.ts     # Pure greedy AI (no strategic layer)
+│       └── aiStrategy.ts   # AIStrategy interface
 └── strategy/           # @hexwar/strategy — hierarchical AI (npm package)
     └── src/
         ├── assessor/       # Geopolitical snapshot + momentum history
         ├── strategies/     # Strategy catalog (threat, opportunism, alliance, consolidation)
         ├── operational/    # Front mask + interior unit routing
-        ├── tactical/       # Constrained greedy order generation
+        ├── tactical/       # Constrained greedy order generation (imports scoring from @hexwar/greedy)
         └── highCommand.ts  # HighCommandAI — wires all four layers
 src/
 ├── engine/             # React-side game engine (imports from @hexwar/engine)
@@ -104,8 +109,8 @@ src/
 │   │   ├── terrainTextures.ts     # Procedural canvas textures per terrain type
 │   │   └── ...
 │   └── screens/           # Start and end screens
-└── tests/                 # Vitest unit tests (117 tests across 12 suites)
-e2e/                       # Playwright end-to-end tests (39 tests)
+└── tests/                 # Vitest unit tests (204 tests across 17 suites)
+e2e/                       # Playwright end-to-end tests (42 tests)
 research/                  # Python ML research (engine port + AI agents + PPO training)
 ```
 
@@ -196,7 +201,7 @@ A **two-front cap** in the registry limits simultaneous offensive fronts to prev
 Translates directives into per-tile `TileConstraint` objects. DETER tiles accumulate units in place; interior tiles are BFS-routed toward active fronts through friendly territory.
 
 **Tactical layer**
-Greedy scorer that operates only within the allowed targets and unit budgets. Uses the same scoring heuristics as the original `GreedyAI` (neutral: 35, winnable enemy: 50 + advantage × 3, capital bonus: +45), but over a much smaller search space.
+Greedy scorer that operates only within the allowed targets and unit budgets. Imports `scoreTarget` / `unitsToSend` from `@hexwar/greedy` (neutral: 35, winnable enemy: 50 + advantage × 3, capital bonus: +45), so the scoring logic is shared and not duplicated. A capital garrison of 1 unit is enforced on enemy-targeted orders; neutral-targeted orders are exempt since neutral tiles cannot counter-attack.
 
 See [`packages/strategy/README.md`](packages/strategy/README.md) for the full design and extension guide.
 

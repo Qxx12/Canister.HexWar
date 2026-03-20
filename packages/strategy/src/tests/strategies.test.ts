@@ -263,6 +263,30 @@ describe('commonEnemy — edge cases', () => {
   })
 })
 
+// ─── Registry — default directive ────────────────────────────────────────────
+
+describe('buildStrategicPlan — default directive', () => {
+  it('unassigned neighbors default to EXPAND stance when no strategy fires', () => {
+    const snapshot = makeSnapshot([makeNeighbor({ playerId: 'p1' })])
+    const plan = buildStrategicPlan(snapshot, [])  // no strategies
+    expect(plan.directives.get('p1')?.stance).toBe('EXPAND')
+  })
+
+  it('higher-priority strategy overrides the EXPAND default', () => {
+    // turtleMode (priority 7) should override the default EXPAND (priority 1)
+    const snapshot = makeSnapshot(
+      [
+        makeNeighbor({ playerId: 'p1', relativeStrength: 0.6 }),
+        makeNeighbor({ playerId: 'p2', relativeStrength: 0.7 }),
+      ],
+      { myMomentumDelta: -4 },
+    )
+    const plan = buildStrategicPlan(snapshot, [turtleMode])
+    expect(plan.directives.get('p1')?.stance).toBe('HOLD')
+    expect(plan.directives.get('p2')?.stance).toBe('HOLD')
+  })
+})
+
 // ─── Registry — two-front avoidance ──────────────────────────────────────────
 
 describe('buildStrategicPlan — two-front cap', () => {
