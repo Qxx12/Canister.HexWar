@@ -135,27 +135,27 @@ class PPOTrainer:
 
     def _update_batch(self, batch: list[Transition]) -> dict[str, float]:
         """Run one mini-batch update step and return metrics."""
-        # Stack transitions — handle variable graph sizes with PyG batching
         try:
             from torch_geometric.data import Batch  # noqa: F401
         except ImportError as err:
             raise ImportError("torch_geometric not installed.") from err
 
-        # Build stacked tensors
-        # Note: edge indices per graph differ; we index into per-graph edges
-        # For simplicity, process each transition individually and accumulate
+        # Normalize advantages across the batch for training stability
+        raw_advantages = torch.stack([tr.advantage for tr in batch])
+        norm_advantages = (raw_advantages - raw_advantages.mean()) / (raw_advantages.std() + 1e-8)
+
         pg_losses = []
         vf_losses = []
         entropies = []
 
-        for tr in batch:
+        for i, tr in enumerate(batch):
             obs = tr.obs.to(self.device)
             acting_mask = tr.acting_mask.to(self.device)
             chosen_edges = tr.chosen_edges.to(self.device)
             chosen_fracs = tr.chosen_fractions.to(self.device)
             old_log_prob = tr.log_prob.to(self.device)
             ret = tr.return_.to(self.device)
-            adv = tr.advantage.to(self.device)
+            adv = norm_advantages[i].to(self.device)
 
             if chosen_edges.numel() == 0:
                 continue

@@ -25,10 +25,12 @@ from copy import deepcopy
 import torch
 
 from ..agents.base_agent import BaseAgent
+from ..agents.neural.encoder import encode_board_with_history
+from ..agents.neural.history_buffer import HistoryBuffer
 from ..agents.neural.ppo_agent import PPOAgent
 from ..engine.game_engine import HexWarEnv
-from ..engine.turn_resolver import TurnResult, resolve_player_turn
-from ..engine.types import PLAYER_IDS, OrderMap
+from ..engine.turn_resolver import resolve_player_turn
+from ..engine.types import PLAYER_IDS, MovementOrder, OrderMap
 from ..engine.unit_generator import generate_units
 from .reward import DEFAULT_REWARD_CONFIG, RewardConfig, compute_step_reward
 from .rollout_buffer import RolloutBuffer, Transition
@@ -39,14 +41,12 @@ class SelfPlayCollector:
     Collect PPO rollouts via self-play.
 
     Args:
-        agent:          The learning agent (used for all 6 players unless
-                        opponent_pool is provided).
+        agent:          The learning agent (used for the learner slot).
         n_episodes:     Number of complete games to run per collect() call.
         max_turns:      Hard turn cap per game.
         reward_config:  Reward hyperparameters.
-        opponent_pool:  Optional list of past-checkpoint agents to use as
-                        opponents. If provided, 5 of the 6 player slots are
-                        randomly filled from the pool.
+        opponent_pool:  List of past-checkpoint agents used as opponents.
+                        Defaults to [agent] (current policy vs itself).
         seed:           Base RNG seed (incremented per episode).
     """
 
@@ -63,8 +63,12 @@ class SelfPlayCollector:
         self.n_episodes = n_episodes
         self.max_turns = max_turns
         self.reward_config = reward_config
-        self.opponent_pool = opponent_pool or [agent]
+        self.opponent_pool: list[BaseAgent] = list(opponent_pool) if opponent_pool else [agent]
         self.seed = seed
+
+    def add_to_pool(self, agent: BaseAgent) -> None:
+        """Add a past-checkpoint agent to the opponent pool."""
+        self.opponent_pool.append(agent)
 
     def collect(self) -> dict[str, RolloutBuffer]:
         """
@@ -87,23 +91,37 @@ class SelfPlayCollector:
         return buffers
 
     def _run_episode(self, episode_idx: int, buffers: dict[str, RolloutBuffer]) -> None:
-        """Run one game and append transitions to buffers."""
+        """Run one game and append transitions to the learner's buffer."""
         import random as _random
+        import torch.nn.functional as F
+        from torch.distributions import Beta as _Beta
+
         rng = _random.Random(self.seed + episode_idx)
 
-        # Build agent assignment: learner plays one random slot
+        # Randomly assign learner to one player slot; fill others from pool
         learner_id = rng.choice(PLAYER_IDS)
-        agents: dict[str, BaseAgent] = {}
-        for pid in PLAYER_IDS:
-            if pid == learner_id:
-                agents[pid] = self.agent
-            else:
-                agents[pid] = rng.choice(self.opponent_pool)
+        agents: dict[str, BaseAgent] = {
+            pid: (self.agent if pid == learner_id else rng.choice(self.opponent_pool))
+            for pid in PLAYER_IDS
+        }
 
         env = HexWarEnv(agents={}, seed=self.seed + episode_idx, max_turns=self.max_turns)
 
-        # Manual step loop to capture per-step observations
+        # Reset history buffers on PPOAgent opponents (they maintain internal state)
+        for pid, ag in agents.items():
+            if isinstance(ag, PPOAgent) and pid != learner_id:
+                ag.reset(env.board)
+
+        # Per-player frame-stacking history buffers
+        histories: dict[str, HistoryBuffer] = {
+            pid: HistoryBuffer(k=self.agent.history_k) for pid in PLAYER_IDS
+        }
+        for hist in histories.values():
+            hist.reset(env.board)
+
         while env.phase != "end":
+
+            # ── Unit generation ───────────────────────────────────────
             if env.phase == "generateUnits":
                 generate_units(env.board, env.stats)
                 env.turn.turn_number += 1
@@ -114,100 +132,106 @@ class SelfPlayCollector:
                 env.phase = "playerTurn"
                 continue
 
-            live = [p for p in env.players if not p.is_eliminated]
+            # ── Player turn ───────────────────────────────────────────
+            # Mirror game_engine.py: iterate the fixed player_ids list so
+            # mid-round eliminations never shift indices or skip players.
             idx = env.turn.active_ai_index
-            if idx >= len(live):
+            if idx >= len(env.player_ids):
                 env.phase = "generateUnits"
                 continue
 
-            player = live[idx]
-            agent = agents.get(player.id)
+            pid = env.player_ids[idx]
+            env.turn.active_ai_index += 1
 
+            player = next((p for p in env.players if p.id == pid), None)
+            if player is None or player.is_eliminated:
+                continue
+
+            agent = agents[pid]
             board_before = deepcopy(env.board)
             players_before = deepcopy(env.players)
 
+            # Action defaults (for non-PPO or non-learner agents)
             orders: OrderMap = {}
             value_est = torch.tensor(0.0)
             chosen_edges = torch.zeros(0, dtype=torch.long)
             chosen_fracs = torch.zeros(0)
             log_p = torch.tensor(0.0)
             acting_mask_t = torch.zeros(0, dtype=torch.bool)
+            obs_data = None
 
-            if agent is not None and isinstance(agent, PPOAgent) and player.id == learner_id:
-                # Collect with gradient-free forward
+            if isinstance(agent, PPOAgent) and pid == learner_id:
+                # Build frame-stacked observation (CPU) — keep on CPU for buffer
+                frames = histories[pid].get_frames()
+                frames[-1] = env.board  # ensure newest slot = current board
+
+                obs_data = encode_board_with_history(frames, pid)
+                data = obs_data.clone().to(agent.device)
+
+                node_keys: list[str] = data.node_keys  # type: ignore[assignment]
+                acting_mask_t = torch.tensor(
+                    [env.board[k].owner == pid and env.board[k].units > 0
+                     for k in node_keys],
+                    dtype=torch.bool,
+                    device=agent.device,
+                )
+
                 with torch.no_grad():
-                    from ..agents.neural.encoder import encode_board as _enc
-                    data = _enc(env.board, player.id)
-                    data = data.to(agent.device)
-
-                    node_keys = data.node_keys
-                    acting_mask_t = torch.tensor(
-                        [
-                            env.board[k].owner == player.id and env.board[k].units > 0
-                            for k in node_keys
-                        ],
-                        dtype=torch.bool,
-                        device=agent.device,
-                    )
-
                     ml, alpha, beta, val = agent.model(
                         data.x, data.edge_index, data.edge_attr, data.u,
-                        acting_mask_t, batch=None
+                        acting_mask_t, batch=None,
                     )
 
-                    src = data.edge_index[0]
-                    valid_src = acting_mask_t[src]
-                    ml = ml.masked_fill(~valid_src, -1e9)
+                src = data.edge_index[0]
+                valid_src = acting_mask_t[src]
+                ml = ml.masked_fill(~valid_src, -1e9)
 
-                    import torch.nn.functional as F
-                    from torch.distributions import Beta as _Beta
+                # Select best outgoing edge per source tile
+                src_to_best: dict[int, int] = {}
+                for ei in range(src.size(0)):
+                    s = src[ei].item()
+                    if not valid_src[ei]:
+                        continue
+                    if s not in src_to_best or ml[ei] > ml[src_to_best[s]]:
+                        src_to_best[s] = ei
 
-                    # Select best edge per source tile
-                    src_to_best: dict[int, int] = {}
-                    for ei in range(src.size(0)):
-                        s = src[ei].item()
-                        if not valid_src[ei]:
-                            continue
-                        if s not in src_to_best or ml[ei] > ml[src_to_best[s]]:
-                            src_to_best[s] = ei
+                sel_edges = torch.tensor(list(src_to_best.values()), dtype=torch.long)
+                if sel_edges.numel() > 0:
+                    frac_dist = _Beta(alpha[sel_edges], beta[sel_edges])
+                    sel_fracs = frac_dist.sample()
+                    lp_edge = F.log_softmax(ml, dim=0)[sel_edges]
+                    lp_frac = frac_dist.log_prob(sel_fracs.clamp(1e-6, 1 - 1e-6))
+                    log_p = (lp_edge + lp_frac).sum()
+                else:
+                    sel_fracs = torch.zeros(0)
+                    log_p = torch.tensor(0.0)
 
-                    sel_edges = torch.tensor(list(src_to_best.values()), dtype=torch.long)
-                    if sel_edges.numel() > 0:
-                        frac_dist = _Beta(alpha[sel_edges], beta[sel_edges])
-                        sel_fracs = frac_dist.sample()
-                        lp_edge = F.log_softmax(ml, dim=0)[sel_edges]
-                        lp_frac = frac_dist.log_prob(sel_fracs.clamp(1e-6, 1 - 1e-6))
-                        log_p = (lp_edge + lp_frac).sum()
-                    else:
-                        sel_fracs = torch.zeros(0)
-                        log_p = torch.tensor(0.0)
+                value_est = val
+                chosen_edges = sel_edges
+                chosen_fracs = sel_fracs
 
-                    value_est = val
-                    chosen_edges = sel_edges
-                    chosen_fracs = sel_fracs
+                # Convert selected edges → MovementOrders
+                dst = data.edge_index[1]
+                for i, ei in enumerate(sel_edges.tolist()):
+                    from_key = node_keys[src[ei].item()]
+                    to_key = node_keys[dst[ei].item()]
+                    ft = env.board.get(from_key)
+                    if ft is None or ft.owner != pid or ft.units == 0:
+                        continue
+                    units = max(1, round(sel_fracs[i].item() * ft.units))
+                    orders[from_key] = MovementOrder(
+                        from_key=from_key, to_key=to_key, requested_units=units,
+                    )
 
-                    # Build orders from selected edges
-                    dst = data.edge_index[1]
-                    for i, ei in enumerate(sel_edges.tolist()):
-                        from_key = node_keys[src[ei].item()]
-                        to_key = node_keys[dst[ei].item()]
-                        ft = env.board.get(from_key)
-                        if ft is None or ft.owner != player.id or ft.units == 0:
-                            continue
-                        frac_val = sel_fracs[i].item()
-                        units = max(1, round(frac_val * ft.units))
-                        from ..engine.types import MovementOrder
-                        orders[from_key] = MovementOrder(
-                            from_key=from_key, to_key=to_key, requested_units=units
-                        )
-            elif agent is not None:
-                orders = agent(env.board, player.id, env.players, env.stats)
+            else:
+                orders = agent(env.board, pid, env.players, env.stats)
 
-            result: TurnResult = resolve_player_turn(
+            # Resolve turn
+            result = resolve_player_turn(
                 board=env.board,
                 players=env.players,
                 orders=orders,
-                player_id=player.id,
+                player_id=pid,
                 stats=env.stats,
             )
 
@@ -219,8 +243,13 @@ class SelfPlayCollector:
                 if p.is_eliminated and p.id not in env._elimination_order:
                     env._elimination_order.append(p.id)
 
+            # Advance all history buffers with the post-move board state
+            for hist in histories.values():
+                hist.push(env.board)
+
+            # Reward and transition storage (learner only)
             reward = compute_step_reward(
-                player_id=player.id,
+                player_id=pid,
                 events=result.events,
                 board_before=board_before,
                 board_after=env.board,
@@ -232,11 +261,8 @@ class SelfPlayCollector:
 
             done = result.winner_id is not None
 
-            # Only buffer transitions for the learner player
-            if player.id == learner_id and isinstance(agent, PPOAgent):
-                from ..agents.neural.encoder import encode_board as _enc2
-                obs_data = _enc2(board_before, player.id)
-                buffers[player.id].add(Transition(
+            if pid == learner_id and obs_data is not None:
+                buffers[pid].add(Transition(
                     obs=obs_data,
                     acting_mask=acting_mask_t.cpu(),
                     chosen_edges=chosen_edges.cpu(),
@@ -250,5 +276,3 @@ class SelfPlayCollector:
             if done:
                 env._end_game(winner_id=result.winner_id)
                 break
-
-            env.turn.active_ai_index += 1
