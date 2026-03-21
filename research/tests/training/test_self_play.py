@@ -6,12 +6,12 @@ import pytest
 
 from hexwar.agents.greedy_agent import GreedyAgent
 from hexwar.engine.types import PLAYER_IDS
-from hexwar.training.self_play import SelfPlayCollector
 
 try:
     import torch
     from hexwar.agents.neural.gnn_model import HexWarGNN
     from hexwar.agents.neural.ppo_agent import PPOAgent
+    from hexwar.training.self_play import SelfPlayCollector
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
