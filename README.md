@@ -112,6 +112,22 @@ src/
 └── tests/                 # Vitest unit tests (204 tests across 17 suites)
 e2e/                       # Playwright end-to-end tests (42 tests)
 research/                  # Python ML research (engine port + AI agents + PPO training)
+├── hexwar/
+│   ├── engine/            # Python port of game engine (board, combat, turn resolver)
+│   ├── agents/
+│   │   ├── greedy_agent.py        # 8-feature linear scoring agent (CMA-ES target)
+│   │   ├── evolutionary/          # CMA-ES weight optimiser (cmaes_train.py)
+│   │   └── neural/
+│   │       ├── gnn_model.py       # HexWarGNN — GATv2Conv, 4 layers, 4 heads, 128-dim
+│   │       └── ppo_agent.py       # PPOAgent with frame stacking (K=5 history)
+│   ├── training/
+│   │   ├── rollout_buffer.py      # Transition storage + GAE return computation
+│   │   ├── self_play.py           # SelfPlayCollector — population-based self-play
+│   │   ├── ppo_trainer.py         # PPOTrainer — clip objective, advantage normalisation
+│   │   └── ppo_train.py           # Training entry point (Phase A bootstrap → Phase B self-play)
+│   └── evaluation/
+│       └── eval_agent.py          # Tournament evaluator vs GreedyAgent baseline
+└── tests/                 # Python tests (117 tests across engine, agents, training)
 ```
 
 ### Game State Flow
@@ -220,3 +236,37 @@ npm run test:e2e     # end-to-end tests (headless, builds first)
 npm run test:e2e:ui  # end-to-end tests with Playwright interactive UI
 npm run gen-fixtures # regenerate Python cross-engine parity fixtures
 ```
+
+### ML Research (Python)
+
+```bash
+cd research
+uv sync                      # install base deps
+uv sync --extra neural       # include PyTorch + torch_geometric
+
+# CMA-ES weight optimisation (CPU, works on any machine)
+uv run python -m hexwar.agents.evolutionary.cmaes_train \
+  --sigma0 0.5 --games 120 --popsize 48 --output runs/cmaes_v3
+
+# PPO neural network training (GPU recommended)
+uv run python -m hexwar.training.ppo_train \
+  --device cuda --output runs/ppo        # WSL2 / Linux with CUDA
+uv run python -m hexwar.training.ppo_train \
+  --device mps  --output runs/ppo        # Apple Silicon
+
+# Evaluate a checkpoint
+uv run python -m hexwar.evaluation.eval_agent \
+  --checkpoint runs/ppo/ckpt.pt --baseline
+
+# Python tests
+uv run pytest tests/ -v
+```
+
+**Training curriculum** (`ppo_train.py`):
+
+| Phase | Description | Exit condition |
+|-------|-------------|----------------|
+| A — Bootstrap | Learner vs 5 × GreedyAgent opponents | Win rate ≥ 25% or 50 iterations |
+| B — Self-play | Population pool; periodic snapshot every 20 iters | 500 iterations |
+
+**Neural model** (`HexWarGNN`): GATv2Conv message passing over the hex graph, 4 layers × 4 heads × 128-dim hidden; edge action head outputs move logit + Beta distribution for unit fraction; separate value head for PPO critic. Node features include K=5 frame-stacked history (34-dim per node).
