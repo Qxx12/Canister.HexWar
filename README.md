@@ -25,20 +25,20 @@ A turn-based hexagonal grid strategy game. Command units across a procedurally g
 
 ### Controls
 
-**2D view**
+#### 2D view
 
 | Input | Action |
-|-------|--------|
+| ----- | ------ |
 | Left-click tile | Select / set order destination |
 | Right-drag | Pan the board |
 | Scroll / Pinch | Zoom |
 | `Enter` | End turn |
 | `Esc` | Open menu |
 
-**3D view**
+#### 3D view
 
 | Input | Action |
-|-------|--------|
+| ----- | ------ |
 | Click tile | Select / set order destination |
 | Right-drag | Pan the board along the ground plane |
 | Scroll | Zoom |
@@ -48,7 +48,7 @@ A turn-based hexagonal grid strategy game. Command units across a procedurally g
 Toggle between 2D and 3D using the **2D / 3D** button in the bottom-left corner. In 3D mode two additional buttons appear:
 
 | Button | Action |
-|--------|--------|
+| ------ | ------ |
 | ☀ | Toggle directional sunlight on/off (resets to on each time you enter 3D) |
 | ◐ | Toggle tree/object shadows on/off |
 
@@ -59,7 +59,7 @@ Toggle between 2D and 3D using the **2D / 3D** button in the bottom-left corner.
 ### Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+| ----- | ---------- |
 | UI | React 19, TypeScript |
 | 3D rendering | Three.js, React Three Fiber, Drei |
 | Styling | SCSS Modules |
@@ -69,7 +69,7 @@ Toggle between 2D and 3D using the **2D / 3D** button in the bottom-left corner.
 
 ### Project Structure
 
-```
+```text
 packages/
 ├── engine/             # @hexwar/engine — shared game logic (npm package)
 │   ├── src/
@@ -132,7 +132,7 @@ research/                  # Python ML research (engine port + AI agents + PPO t
 
 ### Game State Flow
 
-```
+```text
 playerTurn → [human issues orders] → aiTurn → [AI 1..5 resolve] → generateUnits → playerTurn
 ```
 
@@ -150,7 +150,7 @@ State lives in a React reducer (`useGameState`). The engine is pure functions �
 Each terrain type has a procedurally generated canvas texture drawn with a seeded RNG (deterministic, no external assets):
 
 | Terrain | Visual |
-|---------|--------|
+| ------- | ------ |
 | Grassland | Sparse grass tufts, tiny white flowers |
 | Plains | Dry grass strokes, small red/yellow wildflowers |
 | Desert | Wavy dune ripples, pebble ellipses |
@@ -174,7 +174,7 @@ Rare desert tiles (~6% chance) spawn an oasis: an organic water pool with border
 
 ### Combat Model
 
-```
+```text
 casualties     = min(unitsSent, defendingUnits)
 remainingAttackers = unitsSent - casualties
 conquered      = remainingAttackers > 0 AND remainingDefenders == 0
@@ -186,16 +186,16 @@ Orders use the **initial board snapshot** at turn start — units that arrive at
 
 The AI uses a four-layer hierarchical architecture (`@hexwar/strategy`):
 
-```
+```text
 GeopoliticalSnapshot → StrategicPlan → TileConstraints → OrderMap
       (assessor)         (strategies)     (operational)   (tactical)
 ```
 
-**Strategic layer — High Command**
+#### Strategic layer — High Command
 Reads the board once and produces a `FrontDirective` per neighboring player. Each directive carries a `stance` and a unit budget fraction:
 
 | Stance | Meaning |
-|--------|---------|
+| ------ | ------- |
 | `INVADE` | Full offensive — commit everything |
 | `EXPAND` | Push forward when advantageous |
 | `HOLD` | Defend; route surplus to other fronts |
@@ -205,7 +205,7 @@ Reads the board once and produces a `FrontDirective` per neighboring player. Eac
 **Strategy catalog** (applied in priority order, higher wins):
 
 | Group | Strategies |
-|-------|-----------|
+| ----- | ---------- |
 | Opportunism | Collapse Exploitation (priority 10), Wounded Enemy (6), Vulture Strike (5), Distraction Exploit (5) |
 | Alliance | Common Enemy (4), Don't Finish the Decoy (3) |
 | Threat | Deterrence Wall (4), Flanking Deterrent (3) |
@@ -213,10 +213,10 @@ Reads the board once and produces a `FrontDirective` per neighboring player. Eac
 
 A **two-front cap** in the registry limits simultaneous offensive fronts to prevent unit overcommitment.
 
-**Operational layer**
+#### Operational layer
 Translates directives into per-tile `TileConstraint` objects. DETER tiles accumulate units in place; interior tiles are BFS-routed toward active fronts through friendly territory.
 
-**Tactical layer**
+#### Tactical layer
 Greedy scorer that operates only within the allowed targets and unit budgets. Imports `scoreTarget` / `unitsToSend` from `@hexwar/greedy` (neutral: 35, winnable enemy: 50 + advantage × 3, capital bonus: +45), so the scoring logic is shared and not duplicated. A capital garrison of 1 unit is enforced on enemy-targeted orders; neutral-targeted orders are exempt since neutral tiles cannot counter-attack.
 
 See [`packages/strategy/README.md`](packages/strategy/README.md) for the full design and extension guide.
@@ -265,7 +265,7 @@ uv run pytest tests/ -v
 **Training curriculum** (`ppo_train.py`):
 
 | Phase | Description | Exit condition |
-|-------|-------------|----------------|
+| ----- | ----------- | -------------- |
 | A — Bootstrap | Learner vs 5 × GreedyAgent opponents | Win rate ≥ 25% or 50 iterations |
 | B — Self-play | Population pool; periodic snapshot every 20 iters | 500 iterations |
 

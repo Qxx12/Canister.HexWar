@@ -28,4 +28,18 @@ test.describe('Start screen', () => {
     // Start screen title is gone
     await expect(page.getByRole('heading', { name: 'HexWar' })).not.toBeVisible()
   })
+
+  test('shows copyright text', async ({ page }) => {
+    await expect(page.getByText(/© \d{4} nonaction\.net/)).toBeVisible()
+  })
+
+  test('copyright links to nonaction.net', async ({ page }) => {
+    const link = page.getByRole('link', { name: /nonaction\.net/ })
+    await expect(link).toBeVisible()
+    await expect(link).toHaveAttribute('href', 'https://nonaction.net')
+  })
+
+  test('copyright link opens in a new tab', async ({ page }) => {
+    await expect(page.getByRole('link', { name: /nonaction\.net/ })).toHaveAttribute('target', '_blank')
+  })
 })

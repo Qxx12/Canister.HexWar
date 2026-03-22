@@ -8,7 +8,7 @@ The design keeps the four layers fully decoupled so any tactical backend (greedy
 
 ## Architecture
 
-```
+```text
 Board + Players + TurnHistory
           │
           ▼
@@ -40,7 +40,7 @@ Board + Players + TurnHistory
 Every neighbor gets exactly one `FrontDirective` per turn:
 
 | Stance | Meaning | Unit budget |
-|--------|---------|-------------|
+| ------ | ------- | ----------- |
 | `INVADE` | Full offensive — commit everything | 100% of border units |
 | `EXPAND` | Push forward, take tiles when possible | 80% |
 | `HOLD` | Don't attack; route excess units to other fronts | 40% |
@@ -93,7 +93,9 @@ We are shrinking on two or more fronts simultaneously (`myMomentumDelta ≤ -3`)
 ## Operational Layer
 
 **Front Mask** (`frontMask.ts`)
+
 Converts directives into `TileConstraint` per owned tile:
+
 - `INVADE`/`EXPAND` tiles: `crossBorderAllowed = true`, enemy targets included
 - `DETER` tiles: `maxUnitsFraction = 0` — units accumulate in place
 - `HOLD` / interior tiles: free to route toward active fronts via friendly hops
@@ -124,7 +126,7 @@ In the HexWar app, `aiController.ts` maintains a `Map<PlayerId, HighCommandAI>` 
 
 ## Package layout
 
-```
+```text
 src/
 ├── types.ts                        — All plan/directive/assessment types
 ├── assessor/

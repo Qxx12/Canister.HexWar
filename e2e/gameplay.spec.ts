@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { startGame, clickHumanTileAndNeighbor, getTileInfo } from './helpers'
+import { startGame, clickHumanTileAndNeighbor, getTileInfo, advanceUntilAdjacentHumanTiles } from './helpers'
 
 // ─── Game board rendering ────────────────────────────────────────────────────
 
@@ -301,6 +301,37 @@ test.describe('Viewport panning', () => {
     await page.waitForTimeout(200)
     // Game still running normally — no native menu, HUD still visible
     await expect(page.getByText('Turn 1')).toBeVisible()
+  })
+})
+
+// ─── Bidirectional order guard ────────────────────────────────────────────────
+
+test.describe('Bidirectional order guard', () => {
+  test.beforeEach(async ({ page }) => {
+    await startGame(page)
+  })
+
+  test('reverse order is blocked when an order already exists in the other direction', async ({ page }) => {
+    const pair = await advanceUntilAdjacentHumanTiles(page)
+    if (!pair) return // Could not find adjacent human tiles within turn limit
+    const [a, b] = pair
+
+    // Set order A → B
+    await page.mouse.click(a.cx, a.cy)
+    await page.mouse.click(b.cx, b.cy)
+    await expect(page.getByRole('heading', { name: 'Move Units' })).toBeVisible()
+    await page.getByRole('button', { name: 'Confirm' }).click()
+
+    // Attempt reverse B → A — modal must not open
+    await page.mouse.click(b.cx, b.cy)
+    await page.mouse.click(a.cx, a.cy)
+    await expect(page.getByRole('heading', { name: 'Move Units' })).not.toBeVisible()
+  })
+
+  test('order in one direction is still accepted when no reverse exists', async ({ page }) => {
+    const found = await clickHumanTileAndNeighbor(page)
+    expect(found).toBe(true)
+    await expect(page.getByRole('heading', { name: 'Move Units' })).toBeVisible()
   })
 })
 

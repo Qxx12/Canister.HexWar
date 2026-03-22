@@ -445,6 +445,8 @@ export function GameBoard3D({
     }
     if (selectedKey === key) { setSelectedKey(null); return }
     if (validDestinations.has(key)) {
+      const currentOrders = orders.get(humanPlayerId) ?? new Map()
+      if (currentOrders.get(key)?.toKey === selectedKey) { setSelectedKey(null); return }
       setPendingOrder({ fromKey: selectedKey, toKey: key })
       setSelectedKey(null)
     } else if (tile.owner === humanPlayerId && tile.units > 0) {
@@ -452,7 +454,7 @@ export function GameBoard3D({
     } else {
       setSelectedKey(null)
     }
-  }, [isPlayerTurn, board, selectedKey, humanPlayerId, validDestinations])
+  }, [isPlayerTurn, board, selectedKey, humanPlayerId, validDestinations, orders])
 
   const handleTilePointerOver = useCallback((tile: Tile, e: ThreeEvent<PointerEvent>) => {
     mousePosRef.current = { x: e.clientX, y: e.clientY }

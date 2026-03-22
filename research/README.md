@@ -3,6 +3,7 @@
 A deep machine-learning study for building a strong AI for [HexWar](../Canister.HexWar) — a 6-player hex-grid strategy game.
 
 This project contains:
+
 - A faithful Python port of the HexWar game engine (for headless simulation)
 - AI agents in four tiers: random → greedy → evolutionary (CMA-ES) → neural (PPO + GNN)
 - Training infrastructure for self-play and evaluation
@@ -14,7 +15,7 @@ The trained neural AI will eventually be exported (ONNX) and imported back into 
 
 ## Architecture
 
-```
+```text
 hexwar/
 ├── engine/          # Faithful Python port of the JS game engine
 │   ├── types.py         — Core dataclasses (Tile, Board, Player, etc.)
@@ -57,7 +58,7 @@ hexwar/
 The Python engine is a line-by-line port of the TypeScript source in `src/engine/`. Key fidelity guarantees:
 
 | Concept | JS source | Python port |
-|---|---|---|
+| - | - | - |
 | Hex coordinates | `src/types/hex.ts` | `hexwar/engine/hex_utils.py` |
 | Board generation | `src/engine/boardGenerator.ts` | `hexwar/engine/board_generator.py` |
 | Combat model | `src/engine/combat.ts` | `hexwar/engine/combat.py` |
@@ -84,7 +85,7 @@ Fixture files live at `packages/engine/fixtures/` and should be committed alongs
 
 ### Combat model
 
-```
+```text
 Neutral / friendly tile (owner is None or same player):
   → No casualties. Attacker moves in and stacks units.
   → conquered = True only for neutral tiles.
@@ -113,8 +114,9 @@ Issues a random valid move from every owned tile each turn. Win rate ≈ 1/N_pla
 Scores each candidate move (source tile → adjacent target) with a linear combination of 8 hand-crafted features and picks the highest-scoring move per tile.
 
 **Features:**
+
 | Index | Name | Description |
-|---|---|---|
+| - | - | - |
 | 0 | can_conquer | 1 if we have more units than defender |
 | 1 | is_start_tile | 1 if target is a start tile |
 | 2 | expand_neutral | 1 if target is unowned |
@@ -125,6 +127,7 @@ Scores each candidate move (source tile → adjacent target) with a linear combi
 | 7 | reinforce_friendly | 1 if target is owned by us |
 
 **Key design rules:**
+
 - Never leave own start tile with 0 units (retains ≥ 1 unit defensively)
 - Only reinforces friendly tiles that are on the frontier (has non-owned neighbors) — prevents oscillation between interior tiles
 - Default weights tuned so `attack_enemy` alone (non-winning attack) scores below neutral expansion
@@ -138,6 +141,7 @@ python scripts/train_cmaes.py --generations 200 --games 20 --output runs/cmaes
 ```
 
 CMA-ES is well-suited because:
+
 - The search space is continuous, low-dimensional (8-dim), and noisy
 - No gradient is available (game outcomes are stochastic)
 - CMA-ES handles non-separable, ill-conditioned landscapes
@@ -159,6 +163,7 @@ A `HistoryBuffer` (circular deque, `maxlen=K`) stores deep-copied board snapshot
 #### Graph representation
 
 Each turn is encoded as a graph where:
+
 - **Nodes** = tiles with a **`18 + (K−1) × 4`-dim** feature vector per tile
   - *Current frame (18-dim):* unit count, ownership, terrain one-hot, hex coordinates, neighbor pressure, max enemy-neighbor units
   - *Each past frame (4-dim):* unit count, is-mine, is-enemy, is-neutral — oldest history last
@@ -170,7 +175,7 @@ At **K = 5**: node feature dimension = 18 + 4 × 4 = **34-dim**.
 **Node feature layout:**
 
 | Columns | Content | Dim |
-|---|---|---|
+| - | - | - |
 | 0–17 | Current frame (full features) | 18 |
 | 18–21 | Frame t−1 (units, owner×3) | 4 |
 | 22–25 | Frame t−2 | 4 |
@@ -179,7 +184,7 @@ At **K = 5**: node feature dimension = 18 + 4 × 4 = **34-dim**.
 
 #### Model architecture
 
-```
+```text
 K board snapshots (oldest → newest)
         │
         ▼ HistoryBuffer.get_frames()
@@ -202,6 +207,7 @@ Edge action head              Value head
 #### Action space
 
 For each directed edge (owned source → any adjacent target), the model outputs:
+
 1. **move_logit** — selection score (Categorical over valid edges, invalid edges masked to −∞)
 2. **(α, β)** — Beta distribution parameters for fraction of units to send
 
@@ -228,6 +234,7 @@ python scripts/train_ppo.py --iterations 1000 --episodes 16 --output runs/ppo
 ```
 
 Self-play setup:
+
 - 6-player games; learner is assigned to a random player slot per episode
 - Other 5 slots filled from a checkpoint pool for diversity
 - GAE (λ=0.95, γ=0.99) for advantage estimation
@@ -239,7 +246,7 @@ Self-play setup:
 
 ## Reward Shaping
 
-```
+```text
 terminal win:           +1.0
 terminal loss:          −1.0
 eliminated mid-game:    −0.5
@@ -289,7 +296,7 @@ uv sync --extra neural
 ### Dependencies
 
 | Package | Purpose |
-|---|---|
+| - | - |
 | `cma` | CMA-ES optimisation |
 | `torch` | PyTorch (neural agents) |
 | `torch_geometric` | Graph neural networks |

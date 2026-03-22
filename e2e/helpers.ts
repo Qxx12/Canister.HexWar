@@ -1,11 +1,11 @@
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 // Human player is always index 0, color #E84040
 export const HUMAN_COLOR = '#E84040'
 // Approximate screen-space distance between adjacent hex centers at zoom=1, hexSize=36
 // sqrt(3) * 36 ≈ 62.4px; we use a generous range to accommodate minor zoom/float variance
-const ADJ_MIN = 50
-const ADJ_MAX = 75
+export const ADJ_MIN = 50
+export const ADJ_MAX = 75
 
 export async function startGame(page: Page): Promise<void> {
   await page.goto('/')
@@ -65,4 +65,35 @@ export async function clickHumanTileAndNeighbor(page: Page): Promise<boolean> {
     }
   }
   return false
+}
+
+/**
+ * Advances turns (up to maxTurns), setting expansion orders each turn, until
+ * two adjacent human-owned tiles are found. Returns the pair or null.
+ */
+export async function advanceUntilAdjacentHumanTiles(
+  page: Page,
+  maxTurns = 6,
+): Promise<[{ cx: number; cy: number }, { cx: number; cy: number }] | null> {
+  for (let i = 0; i < maxTurns; i++) {
+    const tiles = await getTileInfo(page)
+    const humanTiles = tiles.filter(t => t.isHuman && t.units > 0)
+    for (const a of humanTiles) {
+      const b = humanTiles.find(b => {
+        if (b === a) return false
+        const dx = b.cx - a.cx
+        const dy = b.cy - a.cy
+        return Math.sqrt(dx * dx + dy * dy) >= ADJ_MIN && Math.sqrt(dx * dx + dy * dy) <= ADJ_MAX
+      })
+      if (b) return [a, b]
+    }
+    // Not found yet — try to expand then end the turn
+    await clickHumanTileAndNeighbor(page)
+    if (await page.getByRole('heading', { name: 'Move Units' }).isVisible()) {
+      await page.getByRole('button', { name: 'Confirm' }).click()
+    }
+    await page.getByTitle('End Turn').click()
+    await expect(page.getByTitle('End Turn')).toBeEnabled({ timeout: 15_000 })
+  }
+  return null
 }

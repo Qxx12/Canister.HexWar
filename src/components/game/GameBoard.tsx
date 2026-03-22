@@ -197,6 +197,7 @@ export function GameBoard({
     }
 
     if (validDestinations.has(key)) {
+      if (humanOrders.get(key)?.toKey === selectedKey) { setSelectedKey(null); return }
       setPendingOrder({ fromKey: selectedKey, toKey: key })
       setSelectedKey(null)
     } else if (tile.owner === humanPlayerId && tile.units > 0) {

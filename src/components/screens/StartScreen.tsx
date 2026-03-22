@@ -55,7 +55,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
             ▶
           </button>
         </div>
-        <p className={styles.copyright}>© {new Date().getFullYear()} nonaction.net</p>
+        <p className={styles.copyright}>© {new Date().getFullYear()} <a href="https://nonaction.net" target="_blank" rel="noopener noreferrer">nonaction.net</a></p>
       </div>
     </div>
   )

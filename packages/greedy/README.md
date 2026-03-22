@@ -7,7 +7,7 @@ Standalone greedy AI for HexWar, plus the shared scoring functions used by `@hex
 ## Contents
 
 | Export | Purpose |
-|--------|---------|
+| ------ | ------- |
 | `GreedyAI` | Self-contained AI: classifies tiles, routes units, scores targets — no strategic layer |
 | `scoreTarget` | Score a potential attack target given attacker unit count and target tile |
 | `unitsToSend` | How many units to commit to an attack given attacker count and target tile |
@@ -20,7 +20,7 @@ Standalone greedy AI for HexWar, plus the shared scoring functions used by `@hex
 ### `scoreTarget(myUnits, target)`
 
 | Situation | Score |
-|-----------|-------|
+| --------- | ----- |
 | Neutral tile | 35 |
 | Neutral capital tile | 80 (35 + 45) |
 | Enemy tile, losing or tied | −1 (skip) |
@@ -33,7 +33,7 @@ Tiles with a score ≤ 0 are never attacked.
 ### `unitsToSend(myUnits, target)`
 
 | Situation | Units sent |
-|-----------|-----------|
+| --------- | --------- |
 | Neutral target | All units (`myUnits`) |
 | Losing or tied against enemy | All units (desperate) |
 | Winning against enemy | `max(target.units + 1, floor(myUnits × 0.85))` |
@@ -78,7 +78,7 @@ if (score > 0) {
 
 `@hexwar/strategy` imports `scoreTarget` and `unitsToSend` from this package for its constrained tactical layer. This keeps the scoring logic in one place rather than duplicated across both AIs.
 
-```
+```text
 @hexwar/greedy          @hexwar/strategy
 ─────────────           ────────────────
 GreedyAI   ◄──────      HighCommandAI
