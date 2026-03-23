@@ -87,9 +87,11 @@ export function buildFrontMask(
         ? Math.max(offensiveBudget, 1.0)
         : offensiveBudget
     } else if (hasDeterEnemy) {
-      // DETER: accumulate units here — do NOT cross even if neutral tiles are adjacent
-      crossBorderAllowed = false
-      maxUnitsFraction = 0
+      // DETER: hold firm against the deterred enemy, but still grab adjacent neutral tiles.
+      // DETER enemies are already excluded from allowedTargetKeys, so crossBorderAllowed=true
+      // here only lets the tactical layer reach the neutrals that are already in the list.
+      crossBorderAllowed = hasNeutralTarget
+      maxUnitsFraction = hasNeutralTarget ? 1.0 : 0
     } else if (hasNeutralTarget) {
       // HOLD frontier or interior facing neutral targets — expand, but conservatively
       // when we have a defensive obligation against a HOLD enemy

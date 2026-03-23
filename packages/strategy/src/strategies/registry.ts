@@ -45,11 +45,18 @@ export function buildStrategicPlan(
     }
   }
 
-  // Two-front avoidance: cap simultaneous offensive fronts
-  const maxOffensive = snapshot.totalActivePlayers <= 2 ? 1 : 2
+  // Two-front avoidance: cap simultaneous offensive fronts.
+  // Only applies when actively at war (INVADE directive exists) — pure neutral
+  // expansion (EXPAND only) should not be artificially capped, as that just
+  // hands free tiles to Greedy-style opponents.
   const offensiveFronts = [...directives.values()]
     .filter(d => d.stance === 'INVADE' || d.stance === 'EXPAND')
     .sort((a, b) => b.priority - a.priority)
+
+  const hasActiveWar = offensiveFronts.some(d => d.stance === 'INVADE')
+  const maxOffensive = !hasActiveWar ? Infinity
+    : snapshot.totalActivePlayers <= 2 ? 1
+    : 2
 
   for (const d of offensiveFronts.slice(maxOffensive)) {
     directives.set(d.neighborId, {

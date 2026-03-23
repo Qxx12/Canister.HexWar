@@ -97,7 +97,7 @@ We are shrinking on two or more fronts simultaneously (`myMomentumDelta ≤ -3`)
 Converts directives into `TileConstraint` per owned tile:
 
 - `INVADE`/`EXPAND` tiles: `crossBorderAllowed = true`, enemy targets included
-- `DETER` tiles: `maxUnitsFraction = 0` — units accumulate in place
+- `DETER` tiles: units accumulate in place; `crossBorderAllowed` only for adjacent neutral tiles (enemy front is frozen)
 - `HOLD` / interior tiles: free to route toward active fronts via friendly hops
 - `IGNORE` neighbors: their tiles excluded from `allowedTargetKeys` entirely
 
@@ -120,7 +120,7 @@ const orders = agent.computeOrders(board, playerId, currentOrders, allPlayers)
 agent.reset()
 ```
 
-In the HexWar app, `aiController.ts` maintains a `Map<PlayerId, HighCommandAI>` and calls `resetAiAgents()` on restart.
+HighCommandAI is available as a fallback but the primary in-game AI is `@hexwar/warlord`. `aiController.ts` follows the same pattern: one instance per player, `resetAiAgents()` on restart.
 
 ---
 

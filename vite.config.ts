@@ -13,6 +13,7 @@ export default defineConfig({
       '@hexwar/engine': path.resolve(__dirname, 'packages/engine/src/index.ts'),
       '@hexwar/greedy': path.resolve(__dirname, 'packages/greedy/src/index.ts'),
       '@hexwar/strategy': path.resolve(__dirname, 'packages/strategy/src/index.ts'),
+      '@hexwar/warlord': path.resolve(__dirname, 'packages/warlord/src/index.ts'),
     },
   },
 })

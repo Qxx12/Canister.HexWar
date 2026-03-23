@@ -27,7 +27,10 @@ export function computeConstrainedOrders(
     const tile = board.get(key)
     if (!tile || tile.units === 0) continue
 
-    const maxUnits = Math.floor(tile.units * constraint.maxUnitsFraction)
+    // Use ceil so the budget fraction is a soft limit: a 3-unit tile at 0.75
+    // gets maxUnits=3 (ceil(2.25)) rather than 2 (floor), avoiding missed
+    // attacks against same-strength enemies. maxUnitsFraction=0 (DETER) → 0.
+    const maxUnits = Math.ceil(tile.units * constraint.maxUnitsFraction)
     if (maxUnits === 0) continue
 
     if (constraint.crossBorderAllowed) {

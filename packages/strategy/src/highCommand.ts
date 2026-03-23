@@ -1,4 +1,5 @@
 import type { Board, PlayerId, Player, OrderMap } from '@hexwar/engine'
+import { hexNeighbors, hexToKey } from '@hexwar/engine'
 import { HistoryTracker } from './assessor/historyTracker.ts'
 import { buildSnapshot } from './assessor/neighborAssessor.ts'
 import { buildStrategicPlan } from './strategies/registry.ts'
@@ -59,7 +60,7 @@ export class HighCommandAI {
 
     // Layer 3 — Operational: tile constraints + interior routing
     const constraints = buildFrontMask(board, playerId, plan)
-    const activeFrontTiles = resolveActiveFrontTiles(snapshot, plan)
+    const activeFrontTiles = resolveActiveFrontTiles(snapshot, plan, board, playerId)
     const interiorRoutes = buildInteriorRoutes(board, playerId, activeFrontTiles)
 
     // Layer 4 — Tactical: constrained greedy order generation
@@ -81,6 +82,8 @@ export class HighCommandAI {
 function resolveActiveFrontTiles(
   snapshot: GeopoliticalSnapshot,
   plan: StrategicPlan,
+  board: Board,
+  playerId: PlayerId,
 ): Set<string> {
   const tiles = new Set<string>()
 
@@ -95,6 +98,22 @@ function resolveActiveFrontTiles(
   if (tiles.size === 0) {
     for (const neighbor of snapshot.neighbors) {
       for (const key of neighbor.sharedBorderTiles) tiles.add(key)
+    }
+  }
+
+  // Second fallback: no neighbors known yet (pre-contact early game).
+  // Find all owned frontier tiles directly from the board so interior routing
+  // still works and units flow toward the expansion front.
+  if (tiles.size === 0) {
+    for (const [key, tile] of board) {
+      if (tile.owner !== playerId) continue
+      for (const nCoord of hexNeighbors(tile.coord)) {
+        const nTile = board.get(hexToKey(nCoord))
+        if (nTile && nTile.owner !== playerId) {
+          tiles.add(key)
+          break
+        }
+      }
     }
   }
 

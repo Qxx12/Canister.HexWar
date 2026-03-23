@@ -97,8 +97,8 @@ describe('buildFrontMask — DETER neighbor', () => {
     expect(mask.has('0,0')).toBe(false)
   })
 
-  it('DETER tile adjacent to a neutral tile still has budget=0 (neutral cannot override DETER)', () => {
-    // Key regression: neutral tile must NOT set crossBorderAllowed on a DETER frontier
+  it('DETER tile adjacent to a neutral tile: allows crossing to neutral but not to enemy', () => {
+    // DETER freezes the enemy front but still lets the tile grab adjacent neutral territory.
     const board = makeBoard([
       makeTile(-1, 0, 'p0', 3),  // friendly — ensures constraint is created
       makeTile(0, 0, 'p0', 5),   // frontier: DETER on p1, neutral on the other side
@@ -108,9 +108,9 @@ describe('buildFrontMask — DETER neighbor', () => {
     const plan = makePlan({ p1: { stance: 'DETER', unitBudgetFraction: 0.9 } })
     const mask = buildFrontMask(board, 'p0', plan)
     const c = mask.get('0,0')!
-    expect(c.crossBorderAllowed).toBe(false)
-    expect(c.maxUnitsFraction).toBe(0)
-    // Neutral is in allowedTargetKeys for interior routing, but crossing is forbidden
+    expect(c.crossBorderAllowed).toBe(true)   // can cross to reach the neutral
+    expect(c.maxUnitsFraction).toBe(1.0)      // full budget to grab the neutral
+    // Enemy tile must never appear as an allowed target
     expect(c.allowedTargetKeys).not.toContain('1,0')
   })
 })

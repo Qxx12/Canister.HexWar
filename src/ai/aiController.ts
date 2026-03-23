@@ -1,11 +1,11 @@
 import type { Board, PlayerId, Player, OrderMap } from '@hexwar/engine'
-import { HighCommandAI } from '@hexwar/strategy'
+import { WarlordAI } from '@hexwar/warlord'
 
-// One HighCommandAI instance per player — maintains per-player history across turns.
-const agents = new Map<PlayerId, HighCommandAI>()
+// One WarlordAI instance per player — maintains per-player state across turns.
+const agents = new Map<PlayerId, WarlordAI>()
 
-function getAgent(playerId: PlayerId): HighCommandAI {
-  if (!agents.has(playerId)) agents.set(playerId, new HighCommandAI())
+function getAgent(playerId: PlayerId): WarlordAI {
+  if (!agents.has(playerId)) agents.set(playerId, new WarlordAI())
   return agents.get(playerId)!
 }
 
