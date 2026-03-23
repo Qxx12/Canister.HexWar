@@ -43,3 +43,26 @@ test.describe('Start screen', () => {
     await expect(page.getByRole('link', { name: /nonaction\.net/ })).toHaveAttribute('target', '_blank')
   })
 })
+
+test.describe('Mobile meta tags', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+  })
+
+  test('theme-color meta tag is present with correct value', async ({ page }) => {
+    const content = await page.$eval(
+      'meta[name="theme-color"]',
+      (el: Element) => el.getAttribute('content'),
+    )
+    expect(content).toBe('#1c100a')
+  })
+
+  test('web manifest link is present', async ({ page }) => {
+    const href = await page.$eval(
+      'link[rel="manifest"]',
+      (el: Element) => el.getAttribute('href'),
+    )
+    expect(href).toBe('/site.webmanifest')
+  })
+})

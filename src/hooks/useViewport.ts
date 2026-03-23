@@ -39,6 +39,7 @@ function zoomToward(v: ViewportState, newZoom: number, cx: number, cy: number, b
 export function useViewport() {
   const [viewport, setViewport] = useState<ViewportState>({ zoom: 1, panX: 0, panY: 0 })
   const isPanning = useRef(false)
+  const didPan = useRef(false)
   const lastPos = useRef({ x: 0, y: 0 })
   const startPos = useRef({ x: 0, y: 0 })
   const pendingCapture = useRef<{ pointerId: number; target: Element } | null>(null)
@@ -75,12 +76,19 @@ export function useViewport() {
     e.preventDefault()
   }, [])
 
+  const wasPanning = useCallback(() => {
+    const result = didPan.current
+    didPan.current = false
+    return result
+  }, [])
+
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 2 && e.pointerType === 'mouse') return
     activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
     if (activePointers.current.size === 1) {
       isPanning.current = false
+      didPan.current = false
       startPos.current = { x: e.clientX, y: e.clientY }
       lastPos.current = { x: e.clientX, y: e.clientY }
       pendingCapture.current = { pointerId: e.pointerId, target: e.currentTarget }
@@ -133,6 +141,7 @@ export function useViewport() {
 
     if (!isPanning.current && dist > DRAG_THRESHOLD) {
       isPanning.current = true
+      if (e.pointerType === 'touch') didPan.current = true
       if (pendingCapture.current) {
         pendingCapture.current.target.setPointerCapture(pendingCapture.current.pointerId)
         pendingCapture.current = null
@@ -173,10 +182,11 @@ export function useViewport() {
   const onPointerCancel = useCallback(() => {
     activePointers.current.clear()
     isPanning.current = false
+    didPan.current = false
     pendingCapture.current = null
     lastPinchDist.current = null
     lastPinchMid.current = null
   }, [])
 
-  return { viewport, centerBoard, resetViewport, onWheel, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onContextMenu }
+  return { viewport, centerBoard, resetViewport, onWheel, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onContextMenu, wasPanning }
 }

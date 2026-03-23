@@ -1,0 +1,17 @@
+{
+  "name": "HexWar",
+  "short_name": "HexWar",
+  "description": "Turn-based hexagonal grid strategy game",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1c100a",
+  "theme_color": "#1c100a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -529,6 +529,7 @@ export function GameBoard3D({
           screenSpacePanning={false}
           zoomSpeed={3}
           mouseButtons={{ LEFT: undefined as unknown as THREE.MOUSE, MIDDLE: undefined as unknown as THREE.MOUSE, RIGHT: THREE.MOUSE.PAN }}
+          touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN }}
         />
         <CameraTiltController minDist={boardRadius * 0.5} maxDist={boardRadius * 1.6} />
         <group position={groupOffset}>

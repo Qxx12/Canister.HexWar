@@ -189,3 +189,82 @@ describe('useViewport — pinch zoom', () => {
     expect(result.current.viewport.zoom).toBeLessThanOrEqual(2.5)
   })
 })
+
+describe('useViewport — wasPanning', () => {
+  it('returns false before any interaction', () => {
+    const { result } = renderHook(() => useViewport())
+    expect(result.current.wasPanning()).toBe(false)
+  })
+
+  it('returns true after a touch pan exceeds the drag threshold', () => {
+    const { result } = renderHook(() => useViewport())
+    act(() => result.current.centerBoard(500, 500))
+
+    act(() => result.current.onPointerDown(makePointer(1, 100, 100)))
+    act(() => result.current.onPointerMove(makePointer(1, 108, 100))) // 8px > threshold (6)
+    act(() => result.current.onPointerMove(makePointer(1, 120, 100)))
+    act(() => result.current.onPointerUp(makePointer(1, 120, 100)))
+
+    expect(result.current.wasPanning()).toBe(true)
+  })
+
+  it('consumes the flag — returns false on second call without new pan', () => {
+    const { result } = renderHook(() => useViewport())
+    act(() => result.current.centerBoard(500, 500))
+
+    act(() => result.current.onPointerDown(makePointer(1, 100, 100)))
+    act(() => result.current.onPointerMove(makePointer(1, 110, 100)))
+    act(() => result.current.onPointerUp(makePointer(1, 110, 100)))
+
+    result.current.wasPanning() // consume
+    expect(result.current.wasPanning()).toBe(false)
+  })
+
+  it('returns false after a short tap below threshold', () => {
+    const { result } = renderHook(() => useViewport())
+    act(() => result.current.centerBoard(500, 500))
+
+    act(() => result.current.onPointerDown(makePointer(1, 100, 100)))
+    act(() => result.current.onPointerMove(makePointer(1, 104, 100))) // 4px < threshold
+    act(() => result.current.onPointerUp(makePointer(1, 104, 100)))
+
+    expect(result.current.wasPanning()).toBe(false)
+  })
+
+  it('returns false after pointercancel', () => {
+    const { result } = renderHook(() => useViewport())
+    act(() => result.current.centerBoard(500, 500))
+
+    act(() => result.current.onPointerDown(makePointer(1, 100, 100)))
+    act(() => result.current.onPointerMove(makePointer(1, 120, 100)))
+    act(() => result.current.onPointerCancel())
+
+    expect(result.current.wasPanning()).toBe(false)
+  })
+
+  it('is reset to false by the next pointerDown', () => {
+    const { result } = renderHook(() => useViewport())
+    act(() => result.current.centerBoard(500, 500))
+
+    // First pan sets the flag
+    act(() => result.current.onPointerDown(makePointer(1, 100, 100)))
+    act(() => result.current.onPointerMove(makePointer(1, 120, 100)))
+    act(() => result.current.onPointerUp(makePointer(1, 120, 100)))
+
+    // New pointerDown resets it without consuming via wasPanning()
+    act(() => result.current.onPointerDown(makePointer(2, 200, 200)))
+
+    expect(result.current.wasPanning()).toBe(false)
+  })
+
+  it('returns false after a mouse right-drag pan (only touch sets the flag)', () => {
+    const { result } = renderHook(() => useViewport())
+    act(() => result.current.centerBoard(500, 500))
+
+    act(() => result.current.onPointerDown(makePointer(1, 100, 100, { button: 2, pointerType: 'mouse' })))
+    act(() => result.current.onPointerMove(makePointer(1, 120, 100, { pointerType: 'mouse' })))
+    act(() => result.current.onPointerUp(makePointer(1, 120, 100, { pointerType: 'mouse' })))
+
+    expect(result.current.wasPanning()).toBe(false)
+  })
+})

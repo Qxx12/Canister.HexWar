@@ -302,6 +302,26 @@ test.describe('Viewport panning', () => {
     // Game still running normally — no native menu, HUD still visible
     await expect(page.getByText('Turn 1')).toBeVisible()
   })
+
+  test('single-finger touch drag pans the board', async ({ page }) => {
+    const transform = page.locator('div[style*="translate"]')
+    const before = await transform.getAttribute('style')
+
+    // Dispatch touch pointer events directly — simulates a single finger pan
+    await page.evaluate(() => {
+      const board = document.querySelector('div[style*="translate"]')?.parentElement
+      if (!board) throw new Error('board container not found')
+      const opts = { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'touch', button: 0, clientX: 400, clientY: 300 }
+      board.dispatchEvent(new PointerEvent('pointerdown', opts))
+      board.dispatchEvent(new PointerEvent('pointermove', { ...opts, clientX: 420, clientY: 300 }))
+      board.dispatchEvent(new PointerEvent('pointermove', { ...opts, clientX: 460, clientY: 300 }))
+      board.dispatchEvent(new PointerEvent('pointermove', { ...opts, clientX: 500, clientY: 300 }))
+      board.dispatchEvent(new PointerEvent('pointerup',   { ...opts, clientX: 500, clientY: 300 }))
+    })
+
+    const after = await transform.getAttribute('style')
+    expect(after).not.toBe(before)
+  })
 })
 
 // ─── Bidirectional order guard ────────────────────────────────────────────────

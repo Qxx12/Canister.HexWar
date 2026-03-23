@@ -189,6 +189,7 @@ export default function App() {
           onContextMenu={viewport.onContextMenu}
           onWheel={viewport.onWheel}
           onReady={handleBoardReady}
+          wasPanning={viewport.wasPanning}
         />
       ) : (
         <GameBoard3D {...sharedBoardProps} sunEnabled={sunEnabled} shadowsEnabled={shadowsEnabled} />

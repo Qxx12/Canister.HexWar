@@ -24,6 +24,7 @@ interface GameBoardProps {
   onContextMenu: (e: React.MouseEvent) => void
   onWheel: (e: React.WheelEvent) => void
   onReady: (width: number, height: number) => void
+  wasPanning: () => boolean
   onSetOrder: (fromKey: string, toKey: string, units: number) => void
   onCancelOrder: (fromKey: string) => void
   onSetStandingOrder: (fromKey: string, toKey: string, units: number) => void
@@ -98,6 +99,7 @@ export function GameBoard({
   onContextMenu,
   onWheel,
   onReady,
+  wasPanning,
   onSetOrder,
   onCancelOrder,
   onSetStandingOrder,
@@ -180,6 +182,7 @@ export function GameBoard({
   }, [selectedKey, board])
 
   const handleTileClick = (key: string) => {
+    if (wasPanning()) return
     if (!isPlayerTurn) return
     const tile = board.get(key)
     if (!tile) return
