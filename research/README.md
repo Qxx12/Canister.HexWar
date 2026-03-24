@@ -111,40 +111,74 @@ Issues a random valid move from every owned tile each turn. Win rate ≈ 1/N_pla
 
 ### Tier 2: Greedy Agent
 
-Scores each candidate move (source tile → adjacent target) with a linear combination of 8 hand-crafted features and picks the highest-scoring move per tile.
+Scores each candidate move (source tile → adjacent target) with a linear combination of 11 hand-crafted features and picks the highest-scoring move per tile.
 
 **Features:**
 
 | Index | Name | Description |
 | - | - | - |
-| 0 | can_conquer | 1 if we have more units than defender |
-| 1 | is_start_tile | 1 if target is a start tile |
-| 2 | expand_neutral | 1 if target is unowned |
-| 3 | attack_enemy | 1 if target is an enemy tile |
-| 4 | units_advantage | `(sent − defending) / sent` |
-| 5 | relative_tile_count | `(ours − theirs) / total` |
-| 6 | border_exposure | fraction of source's neighbors that are enemy |
-| 7 | reinforce_friendly | 1 if target is owned by us |
+| 0 | `can_conquer` | 1 if we have more units than defender |
+| 1 | `is_start_tile` | 1 if target is a start tile |
+| 2 | `expand_neutral` | 1 if target is unowned |
+| 3 | `attack_enemy` | 1 if target is an enemy tile |
+| 4 | `units_advantage` | `(sent − defending) / sent` |
+| 5 | `relative_tile_count` | `(ours − theirs) / total` |
+| 6 | `border_exposure` | fraction of source's neighbors that are enemy |
+| 7 | `reinforce_friendly` | 1 if target is owned by us |
+| 8 | `inv_dist_to_unowned_start` | `1 / (1 + BFS distance)` from target to nearest unowned start tile — encodes the win-condition gradient |
+| 9 | `target_owner_near_elim` | 1 if the target's owner has ≤ 4 tiles — bonus for finishing off a weak player |
+| 10 | `neutral_adj_to_target` | neutral tiles adjacent to target / 6 — rewards capturing junction tiles that open new expansion paths |
+
+Features 8–10 have `DEFAULT_WEIGHTS = 0.0` (disabled out-of-the-box). CMA-ES discovers their values via warmstart from a previous checkpoint.
 
 **Key design rules:**
 
 - Never leave own start tile with 0 units (retains ≥ 1 unit defensively)
 - Only reinforces friendly tiles that are on the frontier (has non-owned neighbors) — prevents oscillation between interior tiles
 - Default weights tuned so `attack_enemy` alone (non-winning attack) scores below neutral expansion
+- BFS gradient (feature 8) is computed once per turn via multi-source BFS from all unowned start tiles — O(board size) cost
 
 ### Tier 3: Evolutionary Agent (CMA-ES)
 
-Optimises the Greedy Agent's 8-dimensional weight vector using [CMA-ES](https://arxiv.org/abs/1604.00772) (Covariance Matrix Adaptation Evolution Strategy). Evaluation fitness is the greedy agent's win rate over 60 games against 5 default-greedy opponents, parallelised across CPU cores. The candidate rotates through all 6 player slots evenly to remove positional bias.
+Optimises the Greedy Agent's weight vector using [CMA-ES](https://arxiv.org/abs/1604.00772) (Covariance Matrix Adaptation Evolution Strategy).
+
+**Search space:** 12-dimensional — 11 feature weights + 1 `send_fraction` (clamped to [0.5, 1.0]).
+
+**Fitness:** win rate over N games, parallelised across CPU cores via `ProcessPoolExecutor`. The candidate rotates through all 6 player slots evenly to remove positional bias.
+
+**Opponent pool:** configurable mix of evolved checkpoint agents and default-weights agents. Training against a frozen pool of default opponents saturates quickly; using a curriculum of evolved opponents maintains a steep fitness gradient.
 
 ```bash
-python scripts/train_cmaes.py --generations 200 --games 20 --output runs/cmaes
+# Fresh run (default opponents)
+python -m hexwar.agents.evolutionary.cmaes_train \
+    --output runs/cmaes_v1 --games 120 --popsize 64
+
+# Warmstart from a previous checkpoint + evolved opponent pool (recommended)
+python -m hexwar.agents.evolutionary.cmaes_train \
+    --output runs/cmaes_v4 \
+    --warmstart runs/cmaes_v3/ckpt_gen0160.json \
+    --opponent-ckpt runs/cmaes_v3/ckpt_gen0160.json \
+    --mix-ratio 0.6 \
+    --games 120 --sigma0 0.5 --popsize 64 --workers 16
 ```
+
+**Key flags:**
+
+| Flag | Description |
+| - | - |
+| `--warmstart PATH` | Load weights from an older checkpoint; pads new feature dims to sensible initial values |
+| `--opponent-ckpt PATH` | Use this checkpoint's weights for the evolved-opponent pool |
+| `--mix-ratio FLOAT` | Fraction of the 5 opponents drawn from `--opponent-ckpt` (0.6 → 3 evolved + 2 default) |
+| `--games N` | Games per candidate per generation (120 → ±4.1% win-rate noise) |
+| `--resume PATH` | Continue an interrupted run of the same search dimension |
 
 CMA-ES is well-suited because:
 
-- The search space is continuous, low-dimensional (8-dim), and noisy
+- The search space is continuous, low-dimensional (12-dim), and noisy
 - No gradient is available (game outcomes are stochastic)
 - CMA-ES handles non-separable, ill-conditioned landscapes
+
+**Checkpoints** are saved every 10 generations to `{output_dir}/ckpt_gen{NNNN}.json` and can be used as warmstart or opponent pool for the next run.
 
 ### Tier 4: Neural Agent (PPO + GNN)
 
@@ -343,12 +377,13 @@ uv run python scripts/run_tournament.py --games 100
 - [x] Random agent (baseline)
 - [x] Greedy agent (hand-tuned heuristics)
 - [x] CMA-ES evolutionary optimisation
+- [x] Expanded greedy agent: 11 features including BFS win-condition gradient, near-elimination bonus, junction-tile expansion value
+- [x] CMA-ES v4: 12-dim search (features + send_fraction), evolved opponent pool, warmstart from prior checkpoints
 - [x] GNN + PPO neural agent
 - [x] Frame-stacked temporal encoding (K=5, 34-dim node features)
 - [x] Self-play training infrastructure
 - [x] Tournament + Elo evaluation
 - [ ] ONNX export for browser integration
-- [ ] Curriculum training (start against random, progress to self-play)
 - [ ] Population-based training (PBT) for hyperparameter tuning
 - [ ] Per-tile LSTM as an alternative to frame stacking (future enhancement)
 - [ ] Integrate trained model back into Canister.HexWar

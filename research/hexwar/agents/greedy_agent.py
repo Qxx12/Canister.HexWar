@@ -7,14 +7,20 @@ Decision model:
   features. The weight vector is exposed so it can be optimised by CMA-ES.
 
 Features (per candidate move from_tile → to_tile):
-  0  can_conquer          1 if units_sent > to_tile.units (hostile), else 0
-  1  is_start_tile        1 if to_tile.is_start_tile
-  2  expand_neutral        1 if to_tile.owner is None
-  3  attack_enemy          1 if to_tile.owner is not None and not ours
-  4  units_advantage       (units_sent - to_tile.units) / max(units_sent, 1)
-  5  relative_tile_count   (our tiles - their tiles) / total_tiles
-  6  border_exposure       # enemy neighbors of from_tile / 6
-  7  reinforce_friendly    1 if to_tile.owner == player_id
+  0  can_conquer               1 if units_sent > to_tile.units (hostile), else 0
+  1  is_start_tile             1 if to_tile.is_start_tile
+  2  expand_neutral             1 if to_tile.owner is None
+  3  attack_enemy               1 if to_tile.owner is not None and not ours
+  4  units_advantage            (units_sent - to_tile.units) / max(units_sent, 1)
+  5  relative_tile_count        (our tiles - their tiles) / total_tiles
+  6  border_exposure            # enemy neighbors of from_tile / 6
+  7  reinforce_friendly         1 if to_tile.owner == player_id
+  8  inv_dist_to_unowned_start  1 / (1 + BFS dist to nearest unowned start tile)
+  9  target_owner_near_elim     1 if target's owner has ≤ NEAR_ELIM_THRESHOLD tiles
+  10 neutral_adj_to_target      neutral neighbors of target / 6
+
+Features 8–10 are set to 0.0 in DEFAULT_WEIGHTS (disabled by default).
+CMA-ES discovers their values via warmstart from a prior checkpoint.
 
 The default weights encode the following priority order:
   conquer start > conquer normal > expand neutral > reinforce > random
@@ -75,7 +81,7 @@ class GreedyAgent(BaseAgent):
     Greedy agent that scores moves with a linear feature model.
 
     Args:
-        weights: Weight vector of length N_FEATURES (8). Falls back to
+        weights: Weight vector of length N_FEATURES (11). Falls back to
                  DEFAULT_WEIGHTS if not provided.
         send_fraction: Fraction of available units to send (default 1.0 =
                        all units). Values in (0, 1] for defensive play.
