@@ -28,7 +28,7 @@ from dataclasses import dataclass
 
 from ...engine.game_engine import HexWarEnv
 from ...engine.types import PLAYER_IDS
-from ..greedy_agent import DEFAULT_WEIGHTS, GreedyAgent
+from ..greedy_agent import DEFAULT_WEIGHTS, N_FEATURES, GreedyAgent
 
 
 @dataclass
@@ -51,13 +51,19 @@ def _run_one_game(
     turns_weight: float,
     tiles_weight: float,
     candidate_slot: int = 0,
+    opponent_weights: list[list[float]] | None = None,
 ) -> tuple[float, float, float]:
     """
     Run one game and return (win, turns, tiles_at_end).
     Module-level so it can be pickled by multiprocessing.
+
+    weights: full search vector for the candidate (N_FEATURES + 1 dims if
+             send_fraction is included; _build_agents splits it).
+    opponent_weights: list of 5 weight vectors, one per non-candidate slot.
+                      None → all opponents use DEFAULT_WEIGHTS.
     """
     candidate_id = PLAYER_IDS[candidate_slot]
-    agents = _build_agents(weights, candidate_id)
+    agents = _build_agents(weights, candidate_id, opponent_weights)
     env = HexWarEnv(agents=agents, seed=seed, max_turns=max_turns)
     result = env.run()
 
@@ -123,6 +129,7 @@ def evaluate_generation(
     win_weight: float = 1.0,
     turns_weight: float = 0.001,
     tiles_weight: float = 0.002,
+    opponent_weights: list[list[float]] | None = None,
 ) -> list[FitnessResult]:
     """
     Evaluate an entire generation (all candidates) in parallel.
@@ -132,13 +139,16 @@ def evaluate_generation(
     aggregated per candidate after all tasks complete.
 
     Args:
-        all_weights:  List of weight vectors (one per candidate).
-        n_games:      Games per candidate.
-        max_turns:    Hard turn cap per game.
-        seed_offset:  Base seed; candidate i game j uses seed_offset+i*n_games+j.
-        n_workers:    Number of parallel worker processes. Defaults to
-                      min(cpu_count, 8) — leaves 2 cores for the main process.
+        all_weights:      List of search vectors (one per candidate).
+                          Each vector is N_FEATURES+1 dims (weights + send_fraction).
+        n_games:          Games per candidate.
+        max_turns:        Hard turn cap per game.
+        seed_offset:      Base seed; candidate i game j uses seed_offset+i*n_games+j.
+        n_workers:        Number of parallel worker processes. Defaults to
+                          min(cpu_count, 8) — leaves 2 cores for the main process.
         win_weight, turns_weight, tiles_weight: Score formula coefficients.
+        opponent_weights: 5-element list of weight vectors for the 5 opponent
+                          agents. None → all opponents use DEFAULT_WEIGHTS.
 
     Returns:
         List of FitnessResult, one per candidate (same order as all_weights).
@@ -162,6 +172,7 @@ def evaluate_generation(
                     list(weights), seed, max_turns,
                     win_weight, turns_weight, tiles_weight,
                     game_idx % len(PLAYER_IDS),
+                    opponent_weights,
                 )
                 futures[fut] = cand_idx
 
@@ -193,10 +204,35 @@ def evaluate_generation(
 def _build_agents(
     weights: Sequence[float],
     candidate_id: str,
+    opponent_weights: list[list[float]] | None = None,
 ) -> dict:
-    """Build the agent dict: candidate vs 5 default-greedy opponents."""
-    agents = {candidate_id: GreedyAgent(weights=weights)}
+    """
+    Build the agent dict: candidate vs 5 opponents.
+
+    weights: full CMA-ES search vector. First N_FEATURES elements are feature
+             weights; element N_FEATURES (if present) is send_fraction, clamped
+             to [0.5, 1.0].
+    opponent_weights: 5 weight vectors (one per non-candidate slot). Each may
+                      be shorter than N_FEATURES (e.g. an old 8-dim checkpoint)
+                      — zero-padded to N_FEATURES automatically. None → all
+                      opponents use DEFAULT_WEIGHTS at send_fraction=1.0.
+    """
+    feature_w = list(weights[:N_FEATURES])
+    send_frac = float(max(0.5, min(1.0, weights[N_FEATURES]))) \
+        if len(weights) > N_FEATURES else 1.0
+    agents = {candidate_id: GreedyAgent(weights=feature_w, send_fraction=send_frac)}
+
+    opp_idx = 0
     for pid in PLAYER_IDS:
-        if pid != candidate_id:
-            agents[pid] = GreedyAgent(weights=DEFAULT_WEIGHTS)
+        if pid == candidate_id:
+            continue
+        if opponent_weights is not None:
+            raw = list(opponent_weights[opp_idx])
+            # Zero-pad if checkpoint was trained with fewer features (e.g. v3 8-dim)
+            if len(raw) < N_FEATURES:
+                raw += [0.0] * (N_FEATURES - len(raw))
+            agents[pid] = GreedyAgent(weights=raw[:N_FEATURES])
+        else:
+            agents[pid] = GreedyAgent(weights=list(DEFAULT_WEIGHTS))
+        opp_idx += 1
     return agents
