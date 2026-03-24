@@ -13,6 +13,7 @@ export default defineConfig({
       '@hexwar/greedy': path.resolve(__dirname, 'packages/greedy/src/index.ts'),
       '@hexwar/strategy': path.resolve(__dirname, 'packages/strategy/src/index.ts'),
       '@hexwar/warlord': path.resolve(__dirname, 'packages/warlord/src/index.ts'),
+      '@hexwar/conqueror': path.resolve(__dirname, 'packages/conqueror/src/index.ts'),
     },
   },
   test: {
@@ -28,6 +29,7 @@ export default defineConfig({
         'packages/greedy/src/**/*.ts',
         'packages/strategy/src/**/*.ts',
         'packages/warlord/src/**/*.ts',
+        'packages/conqueror/src/**/*.ts',
       ],
       exclude: [
         'src/main.tsx',

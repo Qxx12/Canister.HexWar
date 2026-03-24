@@ -120,7 +120,7 @@ const orders = agent.computeOrders(board, playerId, currentOrders, allPlayers)
 agent.reset()
 ```
 
-HighCommandAI is available as a fallback but the primary in-game AI is `@hexwar/warlord`. `aiController.ts` follows the same pattern: one instance per player, `resetAiAgents()` on restart.
+HighCommandAI is available as a fallback but the primary in-game AI is `@hexwar/conqueror`. `aiController.ts` follows the same pattern: one instance per player, `resetAiAgents()` on restart.
 
 ---
 

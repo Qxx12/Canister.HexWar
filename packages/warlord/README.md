@@ -78,4 +78,4 @@ const orders = ai.computeOrders(board, playerId, currentOrders, allPlayers)
 
 One instance per player is recommended (the AI is currently stateless between turns, but `reset()` is available for future use).
 
-In the HexWar app, `aiController.ts` maintains a `Map<PlayerId, WarlordAI>` and calls `resetAiAgents()` on restart.
+WarlordAI has been superseded by `@hexwar/conqueror` as the primary in-game AI. It remains useful as a benchmark baseline and for understanding the design evolution.

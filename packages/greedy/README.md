@@ -79,9 +79,9 @@ if (score > 0) {
 `@hexwar/strategy` imports `scoreTarget` and `unitsToSend` from this package for its constrained tactical layer. This keeps the scoring logic in one place rather than duplicated across AIs.
 
 ```text
-@hexwar/greedy          @hexwar/strategy        @hexwar/warlord
-─────────────           ────────────────        ───────────────
-GreedyAI   ◄──────      HighCommandAI           WarlordAI  ← primary in-game AI
+@hexwar/greedy          @hexwar/strategy        @hexwar/warlord    @hexwar/conqueror
+─────────────           ────────────────        ───────────────    ─────────────────
+GreedyAI   ◄──────      HighCommandAI           WarlordAI          ConquerorAI  ← primary in-game AI
 scoreTarget ──────►      constrainedGreedy.ts
 unitsToSend ──────►
 ```
