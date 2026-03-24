@@ -6,10 +6,11 @@ import pytest
 
 try:
     import torch
+
     from hexwar.agents.neural.gnn_model import HexWarGNN
     from hexwar.agents.neural.ppo_agent import PPOAgent
     from hexwar.training.ppo_trainer import PPOTrainer
-    from hexwar.training.rollout_buffer import RolloutBuffer, Transition
+    from hexwar.training.rollout_buffer import RolloutBuffer
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -100,7 +101,7 @@ class TestPPOTrainer:
         trainer2 = PPOTrainer(agent=agent2, batch_size=4, n_epochs=1)
         trainer2.load_checkpoint(ckpt)
         # Weights should match
-        for (k1, v1), (k2, v2) in zip(
+        for (k1, v1), (_k2, v2) in zip(
             agent.model.named_parameters(), agent2.model.named_parameters()
         ):
             assert torch.equal(v1, v2), f"Mismatch in {k1}"

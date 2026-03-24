@@ -93,6 +93,7 @@ class SelfPlayCollector:
     def _run_episode(self, episode_idx: int, buffers: dict[str, RolloutBuffer]) -> None:
         """Run one game and append transitions to the learner's buffer."""
         import random as _random
+
         import torch.nn.functional as F
         from torch.distributions import Beta as _Beta
 

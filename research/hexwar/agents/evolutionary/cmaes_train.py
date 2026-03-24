@@ -42,18 +42,21 @@ DEFAULT_N_WORKERS = 8     # leave 2 cores for OS / main process
 MAX_GENERATIONS   = 1000  # effectively unlimited; stop via convergence
 
 # CMA-ES search dimension: N_FEATURES weight dims + 1 send_fraction dim
-SEARCH_DIM = N_FEATURES + 1   # 12
+SEARCH_DIM = N_FEATURES + 1   # 15
 
 # Initial send_fraction (last element of x0).
 # CMA-ES will optimise it; clamped to [0.5, 1.0] during evaluation.
 SEND_FRACTION_INIT = 1.0
 
-# Initial weights for features 8-10 that don't exist in older checkpoints.
+# Initial weights for features 8-13 that don't exist in older checkpoints.
 # Set at a scale meaningful relative to the evolved v3 weights (-9 to +12).
-#   inv_dist_to_unowned_start: strong path pull toward win-condition tiles
-#   target_owner_near_elim:    elimination bonus, should dominate neutral
-#   neutral_adj_to_target:     junction tile bonus
-NEW_FEATURE_INIT: list[float] = [7.0, 5.0, 4.0]
+#   8  inv_dist_to_unowned_start: strong path pull toward win-condition tiles
+#   9  target_owner_near_elim:    elimination bonus, should dominate neutral
+#  10  neutral_adj_to_target:     junction tile bonus
+#  11  source_threat_ratio:       negative — discourages attacking from threatened positions
+#  12  is_gateway:                binary last-hop bonus (on top of gradient feature 8)
+#  13  enemy_adj_to_own_start:    very high — clearing threats to our start is critical
+NEW_FEATURE_INIT: list[float] = [7.0, 5.0, 4.0, -5.0, 5.0, 10.0]
 
 
 def train(

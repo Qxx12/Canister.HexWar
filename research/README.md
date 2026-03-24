@@ -128,8 +128,11 @@ Scores each candidate move (source tile → adjacent target) with a linear combi
 | 8 | `inv_dist_to_unowned_start` | `1 / (1 + BFS distance)` from target to nearest unowned start tile — encodes the win-condition gradient |
 | 9 | `target_owner_near_elim` | 1 if the target's owner has ≤ 4 tiles — bonus for finishing off a weak player |
 | 10 | `neutral_adj_to_target` | neutral tiles adjacent to target / 6 — rewards capturing junction tiles that open new expansion paths |
+| 11 | `source_threat_ratio` | `min(1, max_adj_enemy_units / from_tile.units)` — adaptive garrison signal (mirrors ConquerorAI/WarlordAI `GARRISON_FACTOR`); negative weight discourages attacking from a threatened tile |
+| 12 | `is_gateway` | 1 if target is exactly 1 hop from an unowned start tile — binary last-hop bonus on top of the smooth gradient; lets CMA-ES express ConquerorAI's +20 step-function at dist=1 |
+| 13 | `enemy_adj_to_own_start` | 1 if the hostile target is adjacent to one of our own start tiles — high-priority counterattack to clear threats from our base (mirrors ConquerorAI `OWN_START_GARRISON_FACTOR=1.0`) |
 
-Features 8–10 have `DEFAULT_WEIGHTS = 0.0` (disabled out-of-the-box). CMA-ES discovers their values via warmstart from a previous checkpoint.
+Features 8–13 have `DEFAULT_WEIGHTS = 0.0` (disabled out-of-the-box). CMA-ES discovers their values via warmstart from a previous checkpoint.
 
 **Key design rules:**
 
@@ -142,7 +145,7 @@ Features 8–10 have `DEFAULT_WEIGHTS = 0.0` (disabled out-of-the-box). CMA-ES d
 
 Optimises the Greedy Agent's weight vector using [CMA-ES](https://arxiv.org/abs/1604.00772) (Covariance Matrix Adaptation Evolution Strategy).
 
-**Search space:** 12-dimensional — 11 feature weights + 1 `send_fraction` (clamped to [0.5, 1.0]).
+**Search space:** 15-dimensional — 14 feature weights + 1 `send_fraction` (clamped to [0.5, 1.0]).
 
 **Fitness:** win rate over N games, parallelised across CPU cores via `ProcessPoolExecutor`. The candidate rotates through all 6 player slots evenly to remove positional bias.
 
@@ -377,8 +380,8 @@ uv run python scripts/run_tournament.py --games 100
 - [x] Random agent (baseline)
 - [x] Greedy agent (hand-tuned heuristics)
 - [x] CMA-ES evolutionary optimisation
-- [x] Expanded greedy agent: 11 features including BFS win-condition gradient, near-elimination bonus, junction-tile expansion value
-- [x] CMA-ES v4: 12-dim search (features + send_fraction), evolved opponent pool, warmstart from prior checkpoints
+- [x] Expanded greedy agent: 14 features — BFS gradient, near-elimination bonus, junction tile, adaptive garrison signal, gateway binary, own-start threat counter
+- [x] CMA-ES v5: 15-dim search (14 features + send_fraction), evolved opponent pool, warmstart from prior checkpoints
 - [x] GNN + PPO neural agent
 - [x] Frame-stacked temporal encoding (K=5, 34-dim node features)
 - [x] Self-play training infrastructure

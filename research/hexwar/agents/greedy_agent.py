@@ -18,8 +18,11 @@ Features (per candidate move from_tile → to_tile):
   8  inv_dist_to_unowned_start  1 / (1 + BFS dist to nearest unowned start tile)
   9  target_owner_near_elim     1 if target's owner has ≤ NEAR_ELIM_THRESHOLD tiles
   10 neutral_adj_to_target      neutral neighbors of target / 6
+  11 source_threat_ratio        min(1, max_adj_enemy_units / from_tile.units)
+  12 is_gateway                 1 if target is exactly 1 hop from an unowned start tile
+  13 enemy_adj_to_own_start     1 if hostile target is adjacent to one of our start tiles
 
-Features 8–10 are set to 0.0 in DEFAULT_WEIGHTS (disabled by default).
+Features 8–13 are set to 0.0 in DEFAULT_WEIGHTS (disabled by default).
 CMA-ES discovers their values via warmstart from a prior checkpoint.
 
 The default weights encode the following priority order:
@@ -48,10 +51,13 @@ NEAR_ELIM_THRESHOLD = 4
 #   neutral expansion score  = expand_neutral = 1.0
 #   winning attack score     = 1*can_conquer + attack_enemy = 2.1   > neutral ✓
 #
-# Features 8-10 are new in v4:
+# Features 8-13 are disabled in DEFAULT_WEIGHTS; CMA-ES discovers values via warmstart.
 #   8  inv_dist_to_unowned_start — BFS gradient toward win-condition tiles
 #   9  target_owner_near_elim    — bonus for finishing off a weak player
 #  10  neutral_adj_to_target     — expansion value: how many new neutrals open up
+#  11  source_threat_ratio       — garrison signal (ConquerorAI/WarlordAI adaptive garrison)
+#  12  is_gateway                — binary bonus for last-hop tile to an unowned start
+#  13  enemy_adj_to_own_start    — high-priority counterattack to protect our own start
 DEFAULT_WEIGHTS: tuple[float, ...] = (
     2.0,   # 0  can_conquer
     4.0,   # 1  is_start_tile
@@ -64,9 +70,12 @@ DEFAULT_WEIGHTS: tuple[float, ...] = (
     0.0,   # 8  inv_dist_to_unowned_start  (disabled; CMA-ES discovers value via warmstart)
     0.0,   # 9  target_owner_near_elim     (disabled; CMA-ES discovers value via warmstart)
     0.0,   # 10 neutral_adj_to_target      (disabled; CMA-ES discovers value via warmstart)
+    0.0,   # 11 source_threat_ratio        (disabled; CMA-ES discovers value via warmstart)
+    0.0,   # 12 is_gateway                 (disabled; CMA-ES discovers value via warmstart)
+    0.0,   # 13 enemy_adj_to_own_start     (disabled; CMA-ES discovers value via warmstart)
 )
 
-N_FEATURES = len(DEFAULT_WEIGHTS)   # 11
+N_FEATURES = len(DEFAULT_WEIGHTS)   # 14
 
 
 @dataclass
@@ -119,6 +128,24 @@ class GreedyAgent(BaseAgent):
             if _t.owner:
                 tile_counts[_t.owner] = tile_counts.get(_t.owner, 0) + 1
 
+        # Own start tile keys — needed for feature 13 (enemy_adj_to_own_start).
+        own_start_keys: set[str] = {
+            k for k, t in board.items()
+            if t.is_start_tile and t.start_owner == player_id
+        }
+
+        # Max adjacent enemy units per source tile — needed for feature 11
+        # (source_threat_ratio / adaptive garrison signal).
+        max_adj_enemy: dict[str, int] = {}
+        for src_key in our_tiles:
+            src_tile = board[src_key]
+            max_e = 0
+            for nb in hex_neighbors(src_tile.coord):
+                nb_t = board.get(hex_to_key(nb))
+                if nb_t is not None and nb_t.owner not in (None, player_id):
+                    max_e = max(max_e, nb_t.units)
+            max_adj_enemy[src_key] = max_e
+
         orders: OrderMap = {}
 
         for from_key in our_tiles:
@@ -168,6 +195,8 @@ class GreedyAgent(BaseAgent):
                     total_tiles=total_tiles,
                     start_gradient=start_gradient,
                     tile_counts=tile_counts,
+                    max_adj_enemy_src=max_adj_enemy[from_key],
+                    own_start_keys=own_start_keys,
                 )
 
                 if best is None or score > best.score:
@@ -199,6 +228,8 @@ class GreedyAgent(BaseAgent):
         total_tiles: int,
         start_gradient: dict[str, float],
         tile_counts: dict[str, int],
+        max_adj_enemy_src: int,
+        own_start_keys: set[str],
     ) -> float:
         defender_id = to_tile.owner
         defending_units = to_tile.units
@@ -264,6 +295,29 @@ class GreedyAgent(BaseAgent):
         )
         neutral_adj_to_target = n_neutral_adj / 6.0
 
+        # Feature 11: source_threat_ratio
+        # Ratio of the strongest adjacent enemy stack to our available units.
+        # High value → our tile is under pressure; penalises leaving a threatened
+        # tile exposed (mirrors ConquerorAI/WarlordAI adaptive GARRISON_FACTOR).
+        source_threat_ratio = min(
+            1.0, max_adj_enemy_src / max(from_tile.units, 1)
+        )
+
+        # Feature 12: is_gateway
+        # Binary flag: the target tile is exactly 1 hop from an unowned start
+        # tile (inv_dist == 0.5 exactly). ConquerorAI gives a +20 step-bonus at
+        # dist=1; this lets CMA-ES independently weight the discontinuous jump.
+        is_gateway = float(start_gradient.get(to_key, 0.0) == 0.5)
+
+        # Feature 13: enemy_adj_to_own_start
+        # 1 if the hostile target is adjacent to one of our own start tiles.
+        # Clearing these threats is critical (ConquerorAI OWN_START_GARRISON_FACTOR=1.0).
+        if is_hostile:
+            target_nb_keys = {hex_to_key(n) for n in hex_neighbors(to_tile.coord)}
+            enemy_adj_to_own_start = float(bool(target_nb_keys & own_start_keys))
+        else:
+            enemy_adj_to_own_start = 0.0
+
         features = [
             can_conquer,
             is_start,
@@ -276,6 +330,9 @@ class GreedyAgent(BaseAgent):
             inv_dist_to_start,
             target_owner_near_elim,
             neutral_adj_to_target,
+            source_threat_ratio,
+            is_gateway,
+            enemy_adj_to_own_start,
         ]
 
         return sum(w * f for w, f in zip(self._weights, features))
