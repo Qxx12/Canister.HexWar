@@ -7,12 +7,14 @@ import { GameBoard } from './components/game/GameBoard'
 import { GameBoard3D } from './components/game/GameBoard3D'
 import { GameHUD } from './components/game/GameHUD'
 import { StartScreen } from './components/screens/StartScreen'
+import { SettingsScreen } from './components/screens/SettingsScreen'
 import { EndScreen } from './components/screens/EndScreen'
 import type { MovementOrder, Board, TurnStep } from '@hexwar/engine'
-import { resetAiAgents } from './ai/aiController'
+import { resetAiAgents, setAiDifficulty } from './ai/aiController'
+import type { GameSettings } from './types/settings'
 import './styles/main.scss'
 
-type AppScreen = 'start' | 'game' | 'end'
+type AppScreen = 'start' | 'settings' | 'game' | 'end'
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('start')
@@ -42,6 +44,11 @@ export default function App() {
   const [snapshotBoard, setSnapshotBoard] = useState<Board | null>(null)
 
   const handleStartGame = useCallback(() => {
+    setScreen('settings')
+  }, [])
+
+  const handleConfirmSettings = useCallback((settings: GameSettings) => {
+    setAiDifficulty(settings.difficulty)
     startGame()
     setScreen('game')
   }, [startGame])
@@ -149,6 +156,15 @@ export default function App() {
 
   if (screen === 'start') {
     return <StartScreen onStart={handleStartGame} />
+  }
+
+  if (screen === 'settings') {
+    return (
+      <SettingsScreen
+        onConfirm={handleConfirmSettings}
+        onBack={() => setScreen('start')}
+      />
+    )
   }
 
   if (screen === 'end' && state?.stats) {

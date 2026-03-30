@@ -21,12 +21,12 @@ test.describe('Start screen', () => {
     await expect(startBtn).toBeVisible()
   })
 
-  test('start button navigates to game board', async ({ page }) => {
+  test('start button navigates to settings screen', async ({ page }) => {
     await page.getByRole('button').filter({ hasText: '▶' }).click()
-    // Board SVG should appear; hex polygons are the first sign of the game board
-    await expect(page.locator('svg polygon').first()).toBeVisible()
-    // Start screen title is gone
-    await expect(page.getByRole('heading', { name: 'HexWar' })).not.toBeVisible()
+    // Settings screen shows the Opponent section
+    await expect(page.getByRole('heading', { name: 'Opponent' })).toBeVisible()
+    // HexWar title persists on the settings screen
+    await expect(page.getByRole('heading', { name: 'HexWar' })).toBeVisible()
   })
 
   test('shows copyright text', async ({ page }) => {
@@ -41,6 +41,44 @@ test.describe('Start screen', () => {
 
   test('copyright link opens in a new tab', async ({ page }) => {
     await expect(page.getByRole('link', { name: /nonaction\.net/ })).toHaveAttribute('target', '_blank')
+  })
+})
+
+test.describe('Settings screen', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button').filter({ hasText: '▶' }).click()
+    await expect(page.getByRole('heading', { name: 'Opponent' })).toBeVisible()
+  })
+
+  test('shows all three difficulty options', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /Soldier/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Commander/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Warlord/ })).toBeVisible()
+  })
+
+  test('Deploy button navigates to game board', async ({ page }) => {
+    await page.getByRole('button', { name: 'Deploy' }).click()
+    await expect(page.getByTitle('End Turn')).toBeVisible()
+  })
+
+  test('selecting Soldier then deploying starts game', async ({ page }) => {
+    await page.getByRole('button', { name: /Soldier/ }).click()
+    await page.getByRole('button', { name: 'Deploy' }).click()
+    await expect(page.getByTitle('End Turn')).toBeVisible()
+  })
+
+  test('selecting Warlord then deploying starts game', async ({ page }) => {
+    await page.getByRole('button', { name: /Warlord/ }).click()
+    await page.getByRole('button', { name: 'Deploy' }).click()
+    await expect(page.getByTitle('End Turn')).toBeVisible()
+  })
+
+  test('Back button returns to start screen', async ({ page }) => {
+    await page.getByRole('button', { name: /Back/ }).click()
+    await expect(page.getByRole('button').filter({ hasText: '▶' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Opponent' })).not.toBeVisible()
   })
 })
 

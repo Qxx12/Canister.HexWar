@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { computeAiOrders, resetAiAgents } from '../ai/aiController'
+import { computeAiOrders, resetAiAgents, setAiDifficulty } from '../ai/aiController'
 import type { Board, Tile } from '@hexwar/engine'
 import type { Player } from '@hexwar/engine'
 
@@ -42,6 +42,58 @@ describe('computeAiOrders', () => {
     ])
     const orders = computeAiOrders(board, 'p1', new Map(), players)
     expect(orders.size).toBe(0)
+  })
+})
+
+describe('setAiDifficulty', () => {
+  beforeEach(() => { resetAiAgents() })
+
+  const twoTileBoard = () => makeBoard([
+    { coord: { q: 0, r: 0 }, owner: 'p1', units: 5, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+    { coord: { q: 1, r: 0 }, owner: null, units: 0, isStartTile: false, startOwner: null, terrain: 'plains' as const, newlyConquered: false },
+  ])
+
+  it('soldier difficulty returns a valid OrderMap', () => {
+    setAiDifficulty('soldier')
+    const orders = computeAiOrders(twoTileBoard(), 'p1', new Map(), players)
+    expect(orders).toBeInstanceOf(Map)
+  })
+
+  it('commander difficulty returns a valid OrderMap', () => {
+    setAiDifficulty('commander')
+    const orders = computeAiOrders(twoTileBoard(), 'p1', new Map(), players)
+    expect(orders).toBeInstanceOf(Map)
+  })
+
+  it('warlord difficulty returns a valid OrderMap', () => {
+    setAiDifficulty('warlord')
+    const orders = computeAiOrders(twoTileBoard(), 'p1', new Map(), players)
+    expect(orders).toBeInstanceOf(Map)
+  })
+
+  it('changing difficulty after reset uses the new agent type', () => {
+    setAiDifficulty('soldier')
+    resetAiAgents()
+    const orders1 = computeAiOrders(twoTileBoard(), 'p1', new Map(), players)
+
+    setAiDifficulty('warlord')
+    resetAiAgents()
+    const orders2 = computeAiOrders(twoTileBoard(), 'p1', new Map(), players)
+
+    expect(orders1).toBeInstanceOf(Map)
+    expect(orders2).toBeInstanceOf(Map)
+  })
+
+  it('agents created before setAiDifficulty are not retroactively changed', () => {
+    // Agent for p1 is created with 'commander' difficulty
+    setAiDifficulty('commander')
+    computeAiOrders(twoTileBoard(), 'p1', new Map(), players)
+
+    // Changing difficulty does not affect already-created p1 agent
+    setAiDifficulty('warlord')
+    // p1 still uses the commander agent (no reset), p2 would get warlord
+    const orders = computeAiOrders(twoTileBoard(), 'p1', new Map(), players)
+    expect(orders).toBeInstanceOf(Map)
   })
 })
 

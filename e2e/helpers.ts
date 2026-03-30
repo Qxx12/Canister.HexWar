@@ -10,10 +10,12 @@ export const ADJ_MAX = 75
 export async function startGame(page: Page): Promise<void> {
   await page.goto('/')
   await page.waitForLoadState('networkidle')
-  // The start screen has a single ▶ button
+  // Start screen → settings screen
   await page.getByRole('button').filter({ hasText: '▶' }).click()
-  // Board is ready once hex tiles (SVG polygons) are visible
-  await page.locator('svg polygon').first().waitFor({ state: 'visible' })
+  // Settings screen → game (Deploy with default difficulty)
+  await page.getByRole('button', { name: 'Deploy' }).click()
+  // Game is ready when the End Turn button appears in the HUD
+  await page.getByTitle('End Turn').waitFor({ state: 'visible' })
 }
 
 /**

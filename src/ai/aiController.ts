@@ -1,12 +1,32 @@
 import type { Board, PlayerId, Player, OrderMap } from '@hexwar/engine'
+import { HighCommandAI } from '@hexwar/strategy'
 import { ConquerorAI } from '@hexwar/conqueror'
+import { WarlordAI } from '@hexwar/warlord'
+import type { AiDifficulty } from '../types/settings'
 
-// One ConquerorAI instance per player — maintains per-player state across turns.
-const agents = new Map<PlayerId, ConquerorAI>()
+type AiAgent = {
+  computeOrders(board: Board, playerId: PlayerId, currentOrders: OrderMap, allPlayers: Player[]): OrderMap
+}
 
-function getAgent(playerId: PlayerId): ConquerorAI {
-  if (!agents.has(playerId)) agents.set(playerId, new ConquerorAI())
+// One agent instance per player — maintains per-player state across turns.
+let _difficulty: AiDifficulty = 'commander'
+const agents = new Map<PlayerId, AiAgent>()
+
+function createAgent(): AiAgent {
+  switch (_difficulty) {
+    case 'soldier':   return new HighCommandAI()
+    case 'commander': return new ConquerorAI()
+    case 'warlord':   return new WarlordAI()
+  }
+}
+
+function getAgent(playerId: PlayerId): AiAgent {
+  if (!agents.has(playerId)) agents.set(playerId, createAgent())
   return agents.get(playerId)!
+}
+
+export function setAiDifficulty(difficulty: AiDifficulty): void {
+  _difficulty = difficulty
 }
 
 export function computeAiOrders(
