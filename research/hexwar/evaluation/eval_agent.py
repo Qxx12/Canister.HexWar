@@ -101,6 +101,49 @@ def evaluate(
     )
 
 
+def evaluate_agent_vs_greedy(
+    agent,
+    n_games: int = 200,
+    max_turns: int = 300,
+    seed_offset: int = 0,
+) -> EvalResult:
+    """
+    Generic evaluation: pit any agent (PPOAgent, StrategistAgent, etc.)
+    against 5 default-weight GreedyAgent opponents.
+
+    The agent must implement reset() and __call__(board, player_id, players, stats).
+    """
+    wins = tiles_total = turns_total = 0
+
+    for game_idx in range(n_games):
+        candidate_slot = game_idx % len(PLAYER_IDS)
+        candidate_id = PLAYER_IDS[candidate_slot]
+
+        agents = {candidate_id: agent}
+        for pid in PLAYER_IDS:
+            if pid != candidate_id:
+                agents[pid] = GreedyAgent(weights=DEFAULT_WEIGHTS)
+
+        if hasattr(agent, "reset"):
+            agent.reset()
+
+        env = HexWarEnv(agents=agents, seed=seed_offset + game_idx, max_turns=max_turns)
+        result = env.run()
+
+        won = result.winner_id == candidate_id
+        tiles = sum(1 for t in env.board.values() if t.owner == candidate_id)
+        wins += int(won)
+        tiles_total += tiles
+        turns_total += result.turns_played
+
+    return EvalResult(
+        win_rate=wins / n_games,
+        avg_tiles=tiles_total / n_games,
+        avg_turns=turns_total / n_games,
+        n_games=n_games,
+    )
+
+
 def evaluate_vs_greedy_baseline(n_games: int = 200, max_turns: int = 300) -> EvalResult:
     """
     Evaluate the DEFAULT_WEIGHTS GreedyAgent against itself as a sanity-check
