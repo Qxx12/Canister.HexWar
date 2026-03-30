@@ -35,16 +35,22 @@ hexwar/
 │   │   ├── fitness.py       — Multi-game fitness evaluation
 │   │   └── cmaes_train.py   — CMA-ES optimiser for greedy weights
 │   └── neural/
-│       ├── history_buffer.py — Circular buffer of K board snapshots (frame stacking)
+│       ├── history_buffer.py — Circular buffer of K board snapshots (legacy frame stacking)
 │       ├── encoder.py       — Board → PyG Data (node/edge/global features)
-│       ├── gnn_model.py     — GATv2Conv policy + value network
-│       └── ppo_agent.py     — PPO agent wrapping the GNN
+│       ├── gnn_model.py     — HexWarGNN — GATv2Conv policy + value network (legacy)
+│       ├── ppo_agent.py     — PPOAgent with K=5 frame stacking (legacy)
+│       ├── strategist_model.py — StrategistGNN — per-tile GRUCell + global attention
+│       └── strategist_agent.py — StrategistAgent — maintains per-tile GRU hidden state
 │
 ├── training/
 │   ├── reward.py        — Dense + sparse reward shaping
-│   ├── rollout_buffer.py — GAE rollout buffer
-│   ├── self_play.py     — Self-play rollout collection
-│   └── ppo_trainer.py   — PPO-clip policy update
+│   ├── rollout_buffer.py — GAE rollout buffer (legacy)
+│   ├── self_play.py     — Self-play rollout collection (legacy)
+│   ├── ppo_trainer.py   — PPO-clip policy update (legacy)
+│   ├── league.py        — League opponent pool (self-play + snapshots + greedy)
+│   ├── behavioural_cloning.py — BC warm-start: imitate GreedyAgent before PPO
+│   ├── strategist_collect.py  — StrategistCollector + parallel workers (spawn-safe)
+│   └── strategist_train.py    — Training entry point (BC → Phase A/B/C)
 │
 └── evaluation/
     ├── tournament.py    — Round-robin tournament
@@ -183,63 +189,53 @@ CMA-ES is well-suited because:
 
 **Checkpoints** are saved every 10 generations to `{output_dir}/ckpt_gen{NNNN}.json` and can be used as warmstart or opponent pool for the next run.
 
-### Tier 4: Neural Agent (PPO + GNN)
+### Tier 4: Neural Agent (StrategistGNN + PPO)
 
-A graph neural network (GNN) policy trained with Proximal Policy Optimisation (PPO) via self-play.
+A graph neural network policy trained with Proximal Policy Optimisation (PPO) via league self-play with a behavioural cloning warm-start.
 
-#### Temporal frame stacking
+#### Architecture improvements over the legacy HexWarGNN
 
-The model sees the last **K = 5** board states stacked per tile, giving it an explicit view of unit movement trajectories across turns. This lets it detect:
-
-- **Massing attacks** — a tile whose units grow from 0 → 3 → 9 → 22 over 4 turns
-- **Evacuations** — a tile whose units fall from 15 → 11 → 6 → 2 → 0 (units moving toward the border)
-- **Recent conquests** — a tile whose owner changes from enemy → neutral → mine
-
-A `HistoryBuffer` (circular deque, `maxlen=K`) stores deep-copied board snapshots and is pre-filled with the initial state so that turn 1 already has K frames.
+| | HexWarGNN (legacy) | StrategistGNN |
+| - | - | - |
+| Temporal memory | K=5 frame stacking (34-dim nodes, 5-turn horizon) | Per-tile GRUCell (infinite horizon) |
+| Global context | Local message passing only (4-hop radius) | GATv2Conv + MultiheadAttention over all tiles |
+| Phase awareness | None | Normalised turn counter broadcast to all nodes |
 
 #### Graph representation
 
 Each turn is encoded as a graph where:
 
-- **Nodes** = tiles with a **`18 + (K−1) × 4`-dim** feature vector per tile
-  - *Current frame (18-dim):* unit count, ownership, terrain one-hot, hex coordinates, neighbor pressure, max enemy-neighbor units
-  - *Each past frame (4-dim):* unit count, is-mine, is-enemy, is-neutral — oldest history last
+- **Nodes** = tiles with an **18-dim** feature vector (current frame only — history is in GRU state)
+  - unit count, ownership one-hot, terrain one-hot, hex coordinates, neighbour pressure, max enemy-neighbour units
 - **Edges** = adjacency (3-dim: same-owner, enemy-border, unit-strength proxy)
 - **Global features** = tile/unit fractions per player (12-dim)
-
-At **K = 5**: node feature dimension = 18 + 4 × 4 = **34-dim**.
-
-**Node feature layout:**
-
-| Columns | Content | Dim |
-| - | - | - |
-| 0–17 | Current frame (full features) | 18 |
-| 18–21 | Frame t−1 (units, owner×3) | 4 |
-| 22–25 | Frame t−2 | 4 |
-| 26–29 | Frame t−3 | 4 |
-| 30–33 | Frame t−4 | 4 |
 
 #### Model architecture
 
 ```text
-K board snapshots (oldest → newest)
-        │
-        ▼ HistoryBuffer.get_frames()
-Node features [N, 18 + (K-1)×4]
-        │
-        ▼
-Node encoder MLP → hidden_dim
-        │
-        ▼  + Global broadcast (12-dim → hidden_dim)
-4× GATv2Conv (multi-head, skip connection, edge_dim=3)
-        │
-       ┌┴──────────────────────────┐
-       ▼                           ▼
-Edge action head              Value head
-  move_logit (1-dim)          mean-pool (all nodes)
-  Beta(α, β) for fraction   + mean-pool (acting-player nodes)
-                              → scalar V(s)
+Current board frame [N, 18]   h_tiles [N, hidden_dim] (per-tile GRU state)
+          │                           │
+          ▼                           │
+  Node encoder MLP → hidden_dim       │
+          │                           │
+          ▼  (GRUCell fuses current features with past GRU state)
+  Per-tile GRUCell [N, hidden_dim] ───┘
+          │
+          ▼  + Global broadcast (12-dim → hidden_dim)
+  n_layers × GATv2Conv (multi-head, skip, edge_dim=3)
+          │
+          ▼
+  MultiheadAttention (all-to-all, O(N²), N~100 → negligible)
+          │
+         ┌┴──────────────────────────┐
+         ▼                           ▼
+  Edge action head              Value head
+    move_logit (1-dim)          mean-pool (all nodes)
+    Beta(α, β) for fraction   + mean-pool (acting-player nodes)
+                                → scalar V(s)
 ```
+
+`StrategistAgent` stores `h_tiles` between turns; it is reset at game start.
 
 #### Action space
 
@@ -251,33 +247,27 @@ For each directed edge (owned source → any adjacent target), the model outputs
 At inference: sample edge ∝ softmax(logits), sample fraction ~ Beta(α, β).
 At evaluation: argmax edge, fraction = mode of Beta.
 
-#### PPO agent
-
-`PPOAgent` maintains a per-game `HistoryBuffer`:
-
-```python
-agent = PPOAgent(history_k=5)
-agent.reset(initial_board)   # pre-fill buffer at game start
-
-# Each turn:
-orders = agent(board, player_id, players, stats)
-# Internally: push board to buffer, encode K-frame stack, run GNN
-```
+**Per-order PPO clipping**: each order's log-prob is clipped independently — the ratio is computed per order, not as a joint product. This prevents the joint ratio from growing exponentially with the number of orders per turn.
 
 #### Training
 
 ```bash
-python scripts/train_ppo.py --iterations 1000 --episodes 16 --output runs/ppo
+python -m hexwar.training.strategist_train \
+    --device cuda --n-episodes 56 --n-workers 14 --run-dir runs/strategist_v2
 ```
 
-Self-play setup:
+Three-phase curriculum:
 
-- 6-player games; learner is assigned to a random player slot per episode
-- Other 5 slots filled from a checkpoint pool for diversity
-- GAE (λ=0.95, γ=0.99) for advantage estimation
-- PPO-clip (ε=0.2), 4 epochs per update
-- Dense rewards: tile progress + conquest bonus + elimination bonus
-- Terminal rewards: +1 win, −1 loss
+| Phase | Description | Exit condition |
+| ----- | ----------- | -------------- |
+| BC — Warm-start | Behavioural cloning: imitate GreedyAgent (200 games) | Fixed, runs once |
+| A — Bootstrap | Learner vs 5 × GreedyAgent | Win rate ≥ 25% or 50 iters |
+| B — League self-play | Self-play + snapshot pool + greedy mix | 500 iters |
+| C — Competitive | Same as B, reduced entropy | 200 iters |
+
+League mixing (Phase B/C): 50% self-play, 30% past snapshots, 20% greedy opponents. GAE (λ=0.95, γ=0.99), PPO-clip (ε=0.2), 4 epochs per update.
+
+**Worker note**: use `--n-episodes` as a multiple of `--n-workers` (e.g. 56 = 4×14) to keep all workers fully loaded in every `ProcessPoolExecutor` dispatch batch. Workers use a `spawn` context (not fork) for CUDA safety on Linux/WSL2.
 
 ---
 
@@ -382,11 +372,16 @@ uv run python scripts/run_tournament.py --games 100
 - [x] CMA-ES evolutionary optimisation
 - [x] Expanded greedy agent: 14 features — BFS gradient, near-elimination bonus, junction tile, adaptive garrison signal, gateway binary, own-start threat counter
 - [x] CMA-ES v5: 15-dim search (14 features + send_fraction), evolved opponent pool, warmstart from prior checkpoints
-- [x] GNN + PPO neural agent
-- [x] Frame-stacked temporal encoding (K=5, 34-dim node features)
+- [x] GNN + PPO neural agent (HexWarGNN, legacy)
+- [x] Frame-stacked temporal encoding (K=5, 34-dim node features, legacy)
 - [x] Self-play training infrastructure
 - [x] Tournament + Elo evaluation
+- [x] StrategistGNN — per-tile GRUCell replaces frame stacking (infinite temporal horizon)
+- [x] Global self-attention over all tiles (breaks local message-passing blind spot)
+- [x] Behavioural cloning warm-start (imitates GreedyAgent before PPO)
+- [x] League training (self-play + snapshot pool + greedy mix)
+- [x] Per-order PPO clipping (fixes joint-ratio explosion with multi-order turns)
+- [x] Spawn-safe parallel collection (CUDA + Linux multiprocessing)
 - [ ] ONNX export for browser integration
 - [ ] Population-based training (PBT) for hyperparameter tuning
-- [ ] Per-tile LSTM as an alternative to frame stacking (future enhancement)
-- [ ] Integrate trained model back into Canister.HexWar
+- [ ] Integrate trained StrategistGNN back into Canister.HexWar

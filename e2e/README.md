@@ -74,7 +74,7 @@ rounding and any minor zoom variance.
 
 ## Adding new tests
 
-1. Use `startGame(page)` from helpers to navigate past the start screen.
+1. Use `startGame(page)` from helpers to navigate past the start screen and the Settings screen (it clicks Deploy with default settings).
 2. Use `getTileInfo(page)` when you need tile positions — prefer it over CSS class
    selectors, since CSS Modules mangle class names at build time.
 3. Use role/title/text selectors for UI controls — they are stable:

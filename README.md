@@ -94,7 +94,7 @@ src/
 ├── engine/             # React-side game engine (imports from @hexwar/engine)
 │   └── gameEngine.ts      # State transitions, turn management
 ├── ai/
-│   └── aiController.ts    # Per-player HighCommandAI instances; reset on game restart
+│   └── aiController.ts    # Per-player AI instances (HighCommandAI / ConquerorAI / WarlordAI); setAiDifficulty + reset
 ├── hooks/
 │   ├── useGameState.ts    # Reducer-based game state management
 │   ├── useViewport.ts     # Pan/zoom with pointer and pinch support
@@ -108,26 +108,32 @@ src/
 │   │   ├── AnimationLayer3D.tsx   # 3D animation playback
 │   │   ├── terrainTextures.ts     # Procedural canvas textures per terrain type
 │   │   └── ...
-│   └── screens/           # Start and end screens
-└── tests/                 # Vitest unit tests (204 tests across 17 suites)
+│   └── screens/           # Start, Settings, and end screens
+└── tests/                 # Vitest unit tests (19 suites)
 e2e/                       # Playwright end-to-end tests (42 tests)
-research/                  # Python ML research (engine port + AI agents + PPO training)
+research/                  # Python ML research (engine port + AI agents + PPO/GNN training)
 ├── hexwar/
 │   ├── engine/            # Python port of game engine (board, combat, turn resolver)
 │   ├── agents/
-│   │   ├── greedy_agent.py        # 8-feature linear scoring agent (CMA-ES target)
+│   │   ├── greedy_agent.py        # 14-feature linear scoring agent (CMA-ES target)
 │   │   ├── evolutionary/          # CMA-ES weight optimiser (cmaes_train.py)
 │   │   └── neural/
-│   │       ├── gnn_model.py       # HexWarGNN — GATv2Conv, 4 layers, 4 heads, 128-dim
-│   │       └── ppo_agent.py       # PPOAgent with frame stacking (K=5 history)
+│   │       ├── gnn_model.py       # HexWarGNN — GATv2Conv, 4 layers, 4 heads (legacy)
+│   │       ├── ppo_agent.py       # PPOAgent with K=5 frame stacking (legacy)
+│   │       ├── strategist_model.py # StrategistGNN — per-tile GRUCell + global attention
+│   │       └── strategist_agent.py # StrategistAgent — maintains per-tile GRU hidden state
 │   ├── training/
 │   │   ├── rollout_buffer.py      # Transition storage + GAE return computation
-│   │   ├── self_play.py           # SelfPlayCollector — population-based self-play
-│   │   ├── ppo_trainer.py         # PPOTrainer — clip objective, advantage normalisation
-│   │   └── ppo_train.py           # Training entry point (Phase A bootstrap → Phase B self-play)
+│   │   ├── self_play.py           # SelfPlayCollector — population-based self-play (legacy)
+│   │   ├── ppo_trainer.py         # PPOTrainer (legacy)
+│   │   ├── ppo_train.py           # Legacy PPO training entry point
+│   │   ├── league.py              # League — opponent pool (self-play + snapshots + greedy)
+│   │   ├── behavioural_cloning.py # BC warm-start: imitate GreedyAgent before PPO
+│   │   ├── strategist_collect.py  # StrategistCollector + parallel worker (spawn-safe)
+│   │   └── strategist_train.py    # Strategist training entry point (Phase A/B/C)
 │   └── evaluation/
 │       └── eval_agent.py          # Tournament evaluator vs GreedyAgent baseline
-└── tests/                 # Python tests (117 tests across engine, agents, training)
+└── tests/                 # Python tests (engine, agents, training)
 ```
 
 ### Game State Flow
@@ -248,25 +254,27 @@ uv sync --extra neural       # include PyTorch + torch_geometric
 uv run python -m hexwar.agents.evolutionary.cmaes_train \
   --sigma0 0.5 --games 120 --popsize 48 --output runs/cmaes_v3
 
-# PPO neural network training (GPU recommended)
-uv run python -m hexwar.training.ppo_train \
-  --device cuda --output runs/ppo        # WSL2 / Linux with CUDA
-uv run python -m hexwar.training.ppo_train \
-  --device mps  --output runs/ppo        # Apple Silicon
+# StrategistGNN training (GPU recommended)
+uv run python -m hexwar.training.strategist_train \
+  --device cuda --n-episodes 56 --n-workers 14   # WSL2 / Linux with CUDA
+uv run python -m hexwar.training.strategist_train \
+  --device mps  --n-episodes 32                  # Apple Silicon (no workers)
 
 # Evaluate a checkpoint
 uv run python -m hexwar.evaluation.eval_agent \
-  --checkpoint runs/ppo/ckpt.pt --baseline
+  --checkpoint runs/strategist_v2/ckpt_iter0050.pt --baseline
 
 # Python tests
 uv run pytest tests/ -v
 ```
 
-**Training curriculum** (`ppo_train.py`):
+**Training curriculum** (`strategist_train.py`):
 
 | Phase | Description | Exit condition |
 | ----- | ----------- | -------------- |
+| BC — Warm-start | Behavioural cloning: imitate GreedyAgent (200 games) | Fixed, runs once |
 | A — Bootstrap | Learner vs 5 × GreedyAgent opponents | Win rate ≥ 25% or 50 iterations |
-| B — Self-play | Population pool; periodic snapshot every 20 iters | 500 iterations |
+| B — League self-play | Opponents drawn from snapshots + greedy pool | 500 iterations |
+| C — Competitive | Same as B, reduced entropy — encourages decisive play | 200 iterations |
 
-**Neural model** (`HexWarGNN`): GATv2Conv message passing over the hex graph, 4 layers × 4 heads × 128-dim hidden; edge action head outputs move logit + Beta distribution for unit fraction; separate value head for PPO critic. Node features include K=5 frame-stacked history (34-dim per node).
+**Neural model** (`StrategistGNN`): GATv2Conv (4 layers, 4 heads, 128-dim) + per-tile GRUCell for infinite temporal memory + one MultiheadAttention layer for global board visibility. Node features are 18-dim (current frame only — GRU accumulates history). Per-order PPO clipping: each move logit + Beta fraction clipped independently.
