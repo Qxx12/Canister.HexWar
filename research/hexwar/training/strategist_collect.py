@@ -199,7 +199,10 @@ def _run_episode_fn(work: _EpisodeWork) -> list[StrategistTransition]:
 
     Safety: torch.set_num_threads(1) prevents thread-count explosion when
     many workers run simultaneously.
+    file_system sharing: avoids fd-passing via Unix socket ancdata (which hits
+    OS fd limits at high worker counts) by using temp files instead.
     """
+    torch.multiprocessing.set_sharing_strategy('file_system')
     torch.set_num_threads(1)
 
     # Reconstruct agents

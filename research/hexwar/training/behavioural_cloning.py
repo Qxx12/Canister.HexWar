@@ -192,6 +192,7 @@ def bc_train(
     seed: int = 0,
     device: str | torch.device = "cpu",
     verbose: bool = True,
+    max_examples: int = 10_000,
 ) -> None:
     """
     Behavioural cloning warm-start.
@@ -223,6 +224,14 @@ def bc_train(
 
     if verbose:
         print(f"  Collected {len(examples)} examples from {n_games} games.")
+
+    # Cap to max_examples — a warm-start needs coverage, not exhaustive imitation.
+    # The per-example forward-pass loop makes large datasets very slow on GPU.
+    if max_examples is not None and len(examples) > max_examples:
+        rng_sample = random.Random(seed + 1)
+        examples = rng_sample.sample(examples, max_examples)
+        if verbose:
+            print(f"  Sampled {max_examples} examples for training.")
 
     optimizer = Adam(agent.model.parameters(), lr=lr)
     rng = random.Random(seed)
