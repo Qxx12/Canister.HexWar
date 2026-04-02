@@ -256,13 +256,18 @@ uv run python -m hexwar.agents.evolutionary.cmaes_train \
 
 # StrategistGNN training (GPU recommended)
 uv run python -m hexwar.training.strategist_train \
-  --device cuda --n-episodes 56 --n-workers 14   # WSL2 / Linux with CUDA
+  --device cuda --n-episodes 128 --n-workers 16 --run-dir runs/strategist_v3  # WSL2 / Linux with CUDA
 uv run python -m hexwar.training.strategist_train \
-  --device mps  --n-episodes 32                  # Apple Silicon (no workers)
+  --device mps  --n-episodes 32  --run-dir runs/strategist_v3  # Apple Silicon (no workers)
+
+# Reuse an existing BC checkpoint (skips re-collecting games)
+uv run python -m hexwar.training.strategist_train \
+  --device cuda --n-episodes 128 --n-workers 16 --run-dir runs/strategist_v3 \
+  --weights runs/strategist_v2/ckpt_bc.pt
 
 # Evaluate a checkpoint
 uv run python -m hexwar.evaluation.eval_agent \
-  --checkpoint runs/strategist_v2/ckpt_iter0050.pt --baseline
+  --checkpoint runs/strategist_v3/ckpt_iter0050.pt --baseline
 
 # Python tests
 uv run pytest tests/ -v
@@ -272,7 +277,7 @@ uv run pytest tests/ -v
 
 | Phase | Description | Exit condition |
 | ----- | ----------- | -------------- |
-| BC — Warm-start | Behavioural cloning: imitate GreedyAgent (200 games) | Fixed, runs once |
+| BC — Warm-start | Behavioural cloning: 200 games collected, up to 10K examples used | Fixed, runs once |
 | A — Bootstrap | Learner vs 5 × GreedyAgent opponents | Win rate ≥ 25% or 50 iterations |
 | B — League self-play | Opponents drawn from snapshots + greedy pool | 500 iterations |
 | C — Competitive | Same as B, reduced entropy — encourages decisive play | 200 iterations |

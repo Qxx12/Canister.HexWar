@@ -136,3 +136,69 @@ class TestPerOrderClipping:
         metrics = StrategistTrainer(agent=agent).update(buf)
         pg = metrics.get("pg_loss", 0.0)
         assert abs(pg) < 100, f"pg_loss magnitude {pg:.2f} is suspiciously large"
+
+
+# ---------------------------------------------------------------------------
+# Checkpoint persistence
+# ---------------------------------------------------------------------------
+
+class TestCheckpointFormats:
+    def test_trainer_checkpoint_roundtrip(self, tmp_path):
+        """save_checkpoint / load_checkpoint preserves model weights and step."""
+        agent = _make_agent()
+        trainer = StrategistTrainer(agent=agent)
+        trainer._step = 7
+
+        path = tmp_path / "ckpt.pt"
+        trainer.save_checkpoint(path)
+
+        agent2 = _make_agent()
+        trainer2 = StrategistTrainer(agent=agent2)
+        trainer2.load_checkpoint(path)
+
+        assert trainer2._step == 7
+        for k in agent.model.state_dict():
+            assert torch.allclose(
+                agent.model.state_dict()[k].float(),
+                agent2.model.state_dict()[k].float(),
+            ), f"Weight mismatch after roundtrip: {k}"
+
+    def test_weights_format_is_plain_state_dict(self, tmp_path):
+        """agent.save() writes a plain state_dict — not the trainer checkpoint format."""
+        agent = _make_agent()
+        path = tmp_path / "bc.pt"
+        agent.save(path)
+
+        raw = torch.load(path, map_location="cpu")
+        # Plain state_dict: keys are parameter names, values are tensors
+        assert isinstance(raw, dict)
+        assert "model" not in raw, (
+            "agent.save() must write a plain state_dict, not a trainer checkpoint. "
+            "If this fails, load_checkpoint() and agent.load() are now compatible "
+            "and the --weights / --resume distinction is unnecessary."
+        )
+        # All values must be tensors (parameter weights)
+        assert all(isinstance(v, torch.Tensor) for v in raw.values())
+
+    def test_weights_load_via_agent_load(self, tmp_path):
+        """Weights saved by agent.save() can be reloaded by agent.load()."""
+        agent = _make_agent()
+        path = tmp_path / "bc.pt"
+        agent.save(path)
+
+        import copy
+        agent2 = StrategistAgent(
+            model=copy.deepcopy(agent.model), deterministic=True
+        )
+        # Perturb weights so we can verify load actually changes them
+        with torch.no_grad():
+            for p in agent2.model.parameters():
+                p.add_(torch.randn_like(p) * 0.1)
+
+        agent2.load(path)
+
+        for k in agent.model.state_dict():
+            assert torch.allclose(
+                agent.model.state_dict()[k].float(),
+                agent2.model.state_dict()[k].float(),
+            ), f"Weight mismatch after agent.load(): {k}"

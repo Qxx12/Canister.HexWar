@@ -4,6 +4,7 @@ import pytest
 
 try:
     import torch
+
     from hexwar.training.rollout_buffer import RolloutBuffer, Transition
     TORCH_AVAILABLE = True
 except ImportError:

@@ -43,6 +43,11 @@ target-version = "py39"
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+# pytest.importorskip() is intentionally placed before imports to skip without
+# importing torch — ruff sees it as a non-import statement triggering E402.
+"tests/**/*.py" = ["E402", "F811"]
+
 [tool.mypy]
 python_version = "3.9"
 strict = true

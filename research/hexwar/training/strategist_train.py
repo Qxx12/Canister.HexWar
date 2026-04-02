@@ -260,6 +260,7 @@ def train(
     n_workers: int = 1,
     total_iters: int = TOTAL_ITERS,
     resume: str | None = None,
+    weights: str | None = None,
     skip_bc: bool = False,
     skip_phase_a: bool = False,
     seed: int = 42,
@@ -309,6 +310,13 @@ def train(
         trainer.load_checkpoint(resume)
         print(f"Resumed from {resume} (step {trainer._step})")
         skip_bc = True   # never re-run BC when resuming
+
+    if weights:
+        # Load raw model weights (agent.save() format — state_dict only).
+        # Used to warm-start from a BC checkpoint without resuming optimizer state.
+        agent.load(weights)
+        print(f"Loaded weights from {weights}")
+        skip_bc = True   # weights already include BC training
 
     log_path = run_path / "training_log.jsonl"
 
@@ -467,7 +475,8 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--n-workers",    type=int, default=1,
                    help="Parallel episode workers (1=serial, 0=auto=cpu_count)")
     p.add_argument("--total-iters",  type=int, default=TOTAL_ITERS)
-    p.add_argument("--resume",       default=None,              help="Resume from checkpoint path")
+    p.add_argument("--resume",       default=None,              help="Resume from trainer checkpoint (model + optimizer + step)")
+    p.add_argument("--weights",      default=None,              help="Load model weights only (agent.save() format, e.g. ckpt_bc.pt)")
     p.add_argument("--skip-bc",      action="store_true",       help="Skip behavioural cloning warm-start")
     p.add_argument("--skip-phase-a", action="store_true",       help="Skip PPO vs greedy bootstrap")
     p.add_argument("--seed",         type=int, default=42)
@@ -485,6 +494,7 @@ if __name__ == "__main__":
         n_workers=n_workers,
         total_iters=args.total_iters,
         resume=args.resume,
+        weights=args.weights,
         skip_bc=args.skip_bc,
         skip_phase_a=args.skip_phase_a,
         seed=args.seed,

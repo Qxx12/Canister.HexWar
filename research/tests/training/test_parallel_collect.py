@@ -12,8 +12,6 @@ from hexwar.training.league import League, LeagueConfig
 from hexwar.training.strategist_collect import (
     ParallelStrategistCollector,
     StrategistCollector,
-    _EpisodeWork,
-    _OpponentSpec,
     _agent_to_spec,
     _run_episode_fn,
     _spec_to_agent,

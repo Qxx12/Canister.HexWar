@@ -6,6 +6,7 @@ torch = pytest.importorskip("torch")
 pytest.importorskip("torch_geometric")
 
 import torch
+
 from hexwar.agents.neural.strategist_agent import StrategistAgent
 from hexwar.agents.neural.strategist_model import StrategistGNN
 from hexwar.engine.board_generator import generate_board
@@ -109,7 +110,8 @@ class TestStrategistAgentDeterminism:
 
         player_id = PLAYER_IDS[0]
         players = _players()
-        a.reset(); b.reset()
+        a.reset()
+        b.reset()
 
         orders_a = a(board, player_id, players, {})
         orders_b = b(board, player_id, players, {})
@@ -170,7 +172,8 @@ class TestStrategistAgentPersistence:
         # Both agents should produce identical outputs after loading same weights
         player_id = PLAYER_IDS[0]
         players = _players()
-        agent.reset(); agent2.reset()
+        agent.reset()
+        agent2.reset()
         o1 = agent(board, player_id, players, {})
         o2 = agent2(board, player_id, players, {})
         assert set(o1.keys()) == set(o2.keys())

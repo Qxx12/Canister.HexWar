@@ -252,22 +252,34 @@ At evaluation: argmax edge, fraction = mode of Beta.
 #### Training
 
 ```bash
+# Fresh run
 python -m hexwar.training.strategist_train \
-    --device cuda --n-episodes 56 --n-workers 14 --run-dir runs/strategist_v2
+    --device cuda --n-episodes 128 --n-workers 16 --run-dir runs/strategist_v3
+
+# Reuse a BC checkpoint from a previous run (skips BC entirely)
+python -m hexwar.training.strategist_train \
+    --device cuda --n-episodes 128 --n-workers 16 --run-dir runs/strategist_v3 \
+    --weights runs/strategist_v2/ckpt_bc.pt
+
+# Resume a mid-training checkpoint (restores model + optimizer + step)
+python -m hexwar.training.strategist_train \
+    --resume runs/strategist_v3/ckpt_iter0050.pt
 ```
 
 Three-phase curriculum:
 
 | Phase | Description | Exit condition |
 | ----- | ----------- | -------------- |
-| BC — Warm-start | Behavioural cloning: imitate GreedyAgent (200 games) | Fixed, runs once |
+| BC — Warm-start | Behavioural cloning: collect 200 games, train on up to 10K sampled examples | Fixed, runs once |
 | A — Bootstrap | Learner vs 5 × GreedyAgent | Win rate ≥ 25% or 50 iters |
 | B — League self-play | Self-play + snapshot pool + greedy mix | 500 iters |
 | C — Competitive | Same as B, reduced entropy | 200 iters |
 
 League mixing (Phase B/C): 50% self-play, 30% past snapshots, 20% greedy opponents. GAE (λ=0.95, γ=0.99), PPO-clip (ε=0.2), 4 epochs per update.
 
-**Worker note**: use `--n-episodes` as a multiple of `--n-workers` (e.g. 56 = 4×14) to keep all workers fully loaded in every `ProcessPoolExecutor` dispatch batch. Workers use a `spawn` context (not fork) for CUDA safety on Linux/WSL2.
+**Checkpoint formats**: `--resume` loads a trainer checkpoint (model + optimizer + step). `--weights` loads a plain model state dict (the format written by `agent.save()`, e.g. `ckpt_bc.pt`) — useful for warm-starting Phase A from an existing BC run without re-collecting games.
+
+**Worker note**: use `--n-episodes` as a multiple of `--n-workers` (e.g. 128 = 8×16) to keep all workers fully loaded in every `ProcessPoolExecutor` dispatch batch. Workers use a `spawn` context (not fork) for CUDA safety on Linux/WSL2, and `file_system` tensor sharing to avoid fd-limit crashes at high worker counts.
 
 ---
 

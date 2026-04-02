@@ -6,6 +6,7 @@ torch = pytest.importorskip("torch")
 pytest.importorskip("torch_geometric")
 
 import torch
+
 from hexwar.agents.neural.encoder import N_EDGE_FEATURES, N_GLOBAL_FEATURES, node_feature_dim
 from hexwar.agents.neural.gnn_model import HexWarGNN
 

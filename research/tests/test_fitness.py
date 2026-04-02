@@ -3,7 +3,7 @@
 import pytest
 
 from hexwar.agents.evolutionary.fitness import FitnessResult, evaluate_weights
-from hexwar.agents.greedy_agent import DEFAULT_WEIGHTS, N_FEATURES
+from hexwar.agents.greedy_agent import DEFAULT_WEIGHTS
 
 
 class TestFitnessResult:

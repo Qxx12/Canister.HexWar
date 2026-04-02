@@ -1,6 +1,5 @@
 """Tests for the League opponent pool and sampling."""
 
-import pytest
 
 from hexwar.agents.base_agent import BaseAgent
 from hexwar.engine.types import PLAYER_IDS
