@@ -279,8 +279,23 @@ def bc_train(
 
             loss = torch.stack(edge_losses).mean() + 0.5 * torch.stack(frac_losses).mean()
 
+            if not loss.isfinite():
+                continue
+
             optimizer.zero_grad()
             loss.backward()
+
+            # Same Inf-gradient guard as PPO: clip_grad_norm_ with an Inf
+            # gradient computes clip_coef = 1/Inf = 0, then Inf * 0 = NaN
+            # in IEEE 754, permanently corrupting all model weights.
+            has_bad_grad = any(
+                p.grad is not None and not p.grad.isfinite().all()
+                for p in agent.model.parameters()
+            )
+            if has_bad_grad:
+                optimizer.zero_grad()
+                continue
+
             torch.nn.utils.clip_grad_norm_(agent.model.parameters(), 1.0)
             optimizer.step()
 

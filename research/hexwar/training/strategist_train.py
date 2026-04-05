@@ -124,6 +124,12 @@ class StrategistTrainer:
         if not all_trans:
             return {}
 
+        # Guard: if model weights are already corrupted (NaN/Inf), skip the
+        # entire update rather than making things worse.
+        if any(not p.data.isfinite().all() for p in self.agent.model.parameters()):
+            print("WARNING: model weights contain NaN/Inf — skipping update", flush=True)
+            return {}
+
         total = {"loss": 0.0, "pg": 0.0, "vf": 0.0, "ent": 0.0}
         n = 0
 
@@ -166,7 +172,11 @@ class StrategistTrainer:
 
     def _update_batch(self, batch: list[StrategistTransition]) -> dict[str, float]:
         raw_adv = torch.stack([tr.advantage for tr in batch])
-        norm_adv = (raw_adv - raw_adv.mean()) / (raw_adv.std() + 1e-8)
+        # Use correction=0 (population std) so a batch of size 1 returns 0.0
+        # instead of NaN.  With correction=1 (default Bessel), std([x]) is
+        # sqrt(0/0) = NaN, which then propagates: norm_adv → adv → loss →
+        # loss.backward() → NaN in every parameter → model permanently corrupted.
+        norm_adv = (raw_adv - raw_adv.mean()) / (raw_adv.std(correction=0) + 1e-8)
 
         pg_losses, vf_losses, entropies = [], [], []
 
@@ -183,9 +193,14 @@ class StrategistTrainer:
             adv = norm_adv[i].to(self.device)
             h = tr.h_tiles.to(self.device) if tr.h_tiles is not None else None
 
-            log_prob, entropy, value = self.agent.evaluate_actions(
-                obs, am, ce, cf, h_tiles=h, turn_frac=tr.turn_frac
-            )
+            try:
+                log_prob, entropy, value = self.agent.evaluate_actions(
+                    obs, am, ce, cf, h_tiles=h, turn_frac=tr.turn_frac
+                )
+            except Exception:
+                # Beta(NaN, NaN) raises ValueError if weights are corrupted.
+                # Skip this transition rather than crashing the whole update.
+                continue
 
             # Per-order PPO clipping.
             # log_prob and old_lp are both [N_orders] — one entry per movement
@@ -195,7 +210,16 @@ class StrategistTrainer:
             # The previous joint approach (exp(log_prob.sum() - old_lp.sum()))
             # produced ratios like 1.2^10 ≈ 6x for a 10-order turn, which PPO
             # clipping cannot contain and leads to catastrophic loss spikes.
-            ratio = torch.exp(log_prob - old_lp)           # [N_orders]
+            #
+            # Clamp log-ratio to [-20, 20] before exp.  exp(20) ≈ 5e8 — large
+            # enough to represent any real policy shift; small enough that
+            # adv * ratio stays within float32 range (max ~3.4e38).  Without
+            # this clamp a stale old_lp can produce ratio ≈ exp(50) = 5e21,
+            # and multiplying by adv overflows to Inf, making clip_grad_norm_
+            # compute clip_coef = max_norm / Inf = 0, then Inf * 0 = NaN in
+            # IEEE 754, permanently corrupting model weights.
+            log_ratio = torch.clamp(log_prob - old_lp, -20.0, 20.0)
+            ratio = torch.exp(log_ratio)                   # [N_orders]
             pg1 = ratio * adv
             pg2 = torch.clamp(ratio, 1 - self.clip_eps, 1 + self.clip_eps) * adv
             pg_losses.append(-torch.min(pg1, pg2).mean())  # mean across orders
@@ -210,8 +234,29 @@ class StrategistTrainer:
         ent = torch.stack(entropies).mean()
         loss = pg + self.vf_coef * vf - self.ent_coef * ent
 
+        # Skip the update if the loss is non-finite (NaN or Inf).  A single
+        # non-finite gradient step permanently corrupts model weights; it is
+        # always safer to discard the batch and continue.
+        if not loss.isfinite():
+            return {}
+
         self.optimizer.zero_grad()
         loss.backward()
+
+        # Check for Inf/NaN gradients before clip_grad_norm_.
+        # If any gradient is Inf, clip_grad_norm_ computes
+        #   clip_coef = max_norm / total_norm = max_norm / Inf = 0
+        # and then applies param.grad *= clip_coef, giving Inf * 0 = NaN
+        # (IEEE 754), which permanently corrupts every model weight.
+        # Zeroing and skipping is the safe option.
+        has_bad_grad = any(
+            p.grad is not None and not p.grad.isfinite().all()
+            for p in self.agent.model.parameters()
+        )
+        if has_bad_grad:
+            self.optimizer.zero_grad()
+            return {}
+
         torch.nn.utils.clip_grad_norm_(self.agent.model.parameters(), self.max_grad_norm)
         self.optimizer.step()
 
