@@ -333,7 +333,13 @@ class StrategistAgent(BaseAgent):
         log_prob = lp_edge + lp_frac
 
         edge_entropy = -(F.softmax(move_logits, dim=0) * F.log_softmax(move_logits, dim=0)).sum()
-        frac_entropy = Beta(alpha, beta).entropy().mean()
+        # Compute fraction entropy only over the actually-chosen edges.
+        # Using Beta(alpha, beta).entropy().mean() over ALL edges (~600) includes
+        # edges the policy never selected and dilutes the entropy signal with
+        # arbitrary distributions, producing misleading (often very negative)
+        # entropy values that corrupt the entropy bonus term.
+        frac_entropy = Beta(alpha[chosen_edges], beta[chosen_edges]).entropy().mean() \
+            if chosen_edges.numel() > 0 else torch.tensor(0.0, device=alpha.device)
         entropy = edge_entropy + frac_entropy
 
         return log_prob, entropy, value

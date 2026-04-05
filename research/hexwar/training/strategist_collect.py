@@ -31,6 +31,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import Tensor
@@ -146,7 +147,13 @@ class _EpisodeWork:
 
 
 def _agent_to_spec(agent: BaseAgent, default_max_turns: int = 300) -> _OpponentSpec:
-    """Convert any supported agent to a picklable _OpponentSpec."""
+    """Convert any supported agent to a picklable _OpponentSpec.
+
+    State-dict tensors are stored as numpy arrays so the spec is serialised by
+    standard pickle without torch's mmap-based shared-memory mechanism.  With
+    128+ work items in flight simultaneously, torch's file_system strategy
+    creates tens of thousands of mmap files and hits vm.max_map_count.
+    """
     if isinstance(agent, GreedyAgent):
         return _OpponentSpec(
             kind="greedy",
@@ -158,7 +165,8 @@ def _agent_to_spec(agent: BaseAgent, default_max_turns: int = 300) -> _OpponentS
         return _OpponentSpec(
             kind="strategist",
             greedy_weights=None,
-            state_dict={k: v.cpu().clone() for k, v in model.state_dict().items()},
+            state_dict={k: v.cpu().detach().numpy().copy()
+                        for k, v in model.state_dict().items()},
             hidden_dim=model.hidden_dim,
             n_layers=len(model.conv_layers),
             n_heads=model.global_attn.num_heads,
@@ -174,35 +182,93 @@ def _spec_to_agent(spec: _OpponentSpec) -> BaseAgent:
     """Reconstruct an agent from its picklable spec (runs inside worker)."""
     if spec.kind == "greedy":
         return GreedyAgent(weights=spec.greedy_weights)
-    # strategist
+    # strategist — state_dict values are numpy arrays; convert back to tensors
     model = StrategistGNN(
         hidden_dim=spec.hidden_dim,
         n_layers=spec.n_layers,
         n_heads=spec.n_heads,
         dropout=spec.dropout,
     )
-    model.load_state_dict(spec.state_dict)
+    model.load_state_dict({k: torch.from_numpy(np.asarray(v))
+                           for k, v in spec.state_dict.items()})
     model.eval()
     return StrategistAgent(model=model, max_turns=spec.max_turns, deterministic=False)
+
+
+# ---------------------------------------------------------------------------
+# Numpy ↔ StrategistTransition conversion helpers
+#
+# Workers return plain dicts of numpy arrays instead of StrategistTransition
+# objects containing torch tensors.  Standard pickle serialises numpy arrays
+# with zero mmap overhead, completely bypassing torch's shared-memory
+# mechanism (file_system or file_descriptor).  The main process converts
+# the dicts back to StrategistTransition after pool.map() returns.
+# ---------------------------------------------------------------------------
+
+def _transition_to_raw(tr: StrategistTransition) -> dict:
+    """Flatten a StrategistTransition to a plain dict of numpy arrays + scalars."""
+    obs = tr.obs
+    return {
+        "obs_x":         obs.x.numpy(),
+        "obs_edge_index": obs.edge_index.numpy(),
+        "obs_edge_attr": obs.edge_attr.numpy() if obs.edge_attr is not None else None,
+        "obs_u":         obs.u.numpy()         if obs.u         is not None else None,
+        "obs_node_keys": obs.node_keys,
+        "acting_mask":   tr.acting_mask.numpy(),
+        "chosen_edges":  tr.chosen_edges.numpy(),
+        "chosen_fractions": tr.chosen_fractions.numpy(),
+        "log_prob":      tr.log_prob.numpy(),
+        "value":         float(tr.value),
+        "reward":        tr.reward,
+        "done":          tr.done,
+        "h_tiles":       tr.h_tiles.numpy() if tr.h_tiles is not None else None,
+        "turn_frac":     tr.turn_frac,
+    }
+
+
+def _raw_to_transition(d: dict) -> StrategistTransition:
+    """Reconstruct a StrategistTransition from the dict produced by _transition_to_raw."""
+    from torch_geometric.data import Data
+    obs = Data(
+        x          = torch.from_numpy(d["obs_x"]),
+        edge_index = torch.from_numpy(d["obs_edge_index"]),
+        edge_attr  = torch.from_numpy(d["obs_edge_attr"]) if d["obs_edge_attr"] is not None else None,
+        u          = torch.from_numpy(d["obs_u"])         if d["obs_u"]         is not None else None,
+    )
+    obs.node_keys = d["obs_node_keys"]  # type: ignore[attr-defined]
+    return StrategistTransition(
+        obs               = obs,
+        acting_mask       = torch.from_numpy(d["acting_mask"]),
+        chosen_edges      = torch.from_numpy(d["chosen_edges"]),
+        chosen_fractions  = torch.from_numpy(d["chosen_fractions"]),
+        log_prob          = torch.from_numpy(d["log_prob"]),
+        value             = torch.tensor(d["value"]),
+        reward            = d["reward"],
+        done              = d["done"],
+        h_tiles           = torch.from_numpy(d["h_tiles"]) if d["h_tiles"] is not None else None,
+        turn_frac         = d["turn_frac"],
+    )
 
 
 # ---------------------------------------------------------------------------
 # Module-level episode worker (must be at module level for pickle / spawn)
 # ---------------------------------------------------------------------------
 
-def _run_episode_fn(work: _EpisodeWork) -> list[StrategistTransition]:
+def _run_episode_fn(work: _EpisodeWork) -> list[dict]:
     """
-    Run one complete episode and return collected transitions.
+    Run one complete episode and return collected transitions as plain dicts.
+
+    Returns list[dict] (numpy arrays + scalars) instead of
+    list[StrategistTransition] so that standard pickle is used for IPC — no
+    torch shared-memory (mmap) at all.  The main process converts the dicts
+    back to StrategistTransition via _raw_to_transition().
 
     This function is called in a subprocess by ParallelStrategistCollector.
     It is also used by the serial StrategistCollector to avoid duplicating logic.
 
     Safety: torch.set_num_threads(1) prevents thread-count explosion when
     many workers run simultaneously.
-    file_system sharing: avoids fd-passing via Unix socket ancdata (which hits
-    OS fd limits at high worker counts) by using temp files instead.
     """
-    torch.multiprocessing.set_sharing_strategy('file_system')
     torch.set_num_threads(1)
 
     # Reconstruct agents
@@ -217,7 +283,7 @@ def _run_episode_fn(work: _EpisodeWork) -> list[StrategistTransition]:
         if hasattr(ag, "reset"):
             ag.reset(env.board)
 
-    transitions: list[StrategistTransition] = []
+    transitions: list[dict] = []
     turn_number = 0
 
     while env.phase != "end":
@@ -365,9 +431,18 @@ def _run_episode_fn(work: _EpisodeWork) -> list[StrategistTransition]:
         )
 
         done = result.winner_id is not None
+        # Treat learner elimination as a terminal step even when the game
+        # continues (no winner yet). Without this, the last learner transition
+        # in an episode stores done=False, causing GAE to bleed across episode
+        # boundaries: compute_returns() uses next_value from the NEXT episode's
+        # first transition, corrupting advantage estimates for eliminated games.
+        if pid == work.learner_id and not done:
+            learner_after = next((p for p in env.players if p.id == pid), None)
+            if learner_after is not None and learner_after.is_eliminated:
+                done = True
 
         if pid == work.learner_id and obs_data is not None:
-            transitions.append(StrategistTransition(
+            tr = StrategistTransition(
                 obs=obs_data,
                 acting_mask=acting_mask_t.cpu(),
                 chosen_edges=chosen_edges.cpu(),
@@ -378,7 +453,8 @@ def _run_episode_fn(work: _EpisodeWork) -> list[StrategistTransition]:
                 done=done,
                 h_tiles=stored_h,
                 turn_frac=turn_frac,
-            ))
+            )
+            transitions.append(_transition_to_raw(tr))
 
         if done:
             env._end_game(winner_id=result.winner_id)
@@ -419,22 +495,30 @@ class StrategistCollector:
         self.max_turns = max_turns
         self.reward_config = reward_config
         self.seed = seed
+        self._call_count = 0   # advances base seed each collect() call
 
     def collect(self) -> StrategistRolloutBuffer:
         import random as _random
-        rng = _random.Random(self.seed)
+        # Advance base seed each call so every iteration sees different board
+        # seeds and opponent assignments.  Using a fixed seed would cause the
+        # same set of games to be collected on every iteration, potentially
+        # overfitting to a tiny slice of the game distribution.
+        base_seed = self.seed + self._call_count * self.n_episodes
+        self._call_count += 1
+        rng = _random.Random(base_seed)
 
         buf = StrategistRolloutBuffer()
         for ep in range(self.n_episodes):
             learner_id = rng.choice(PLAYER_IDS)
-            work = self._make_work(ep, learner_id)
-            for t in _run_episode_fn(work):
-                buf.add(t)
+            work = self._make_work(ep, learner_id, base_seed)
+            for raw in _run_episode_fn(work):
+                buf.add(_raw_to_transition(raw))
 
         buf.compute_returns()
         return buf
 
-    def _make_work(self, ep: int, learner_id: str) -> _EpisodeWork:
+    def _make_work(self, ep: int, learner_id: str, base_seed: int | None = None) -> _EpisodeWork:
+        seed = (base_seed if base_seed is not None else self.seed) + ep
         sampled = self.league.sample_opponents(learner_id, PLAYER_IDS)
         learner_spec = _agent_to_spec(self.agent, self.max_turns)
         opponent_specs = {
@@ -442,7 +526,7 @@ class StrategistCollector:
             for pid, ag in sampled.items()
         }
         return _EpisodeWork(
-            seed=self.seed + ep,
+            seed=seed,
             learner_id=learner_id,
             learner_spec=learner_spec,
             opponent_specs=opponent_specs,
@@ -491,13 +575,16 @@ class ParallelStrategistCollector:
         self.n_workers = n_workers or min(n_episodes, os.cpu_count() or 1)
         self.reward_config = reward_config
         self.seed = seed
+        self._call_count = 0   # advances base seed each collect() call
 
     def collect(self) -> StrategistRolloutBuffer:
         """
         Run n_episodes games in parallel and return a filled buffer.
 
-        The main process serialises current model weights and league state
-        before dispatch. Workers run entirely independently — no shared state.
+        No torch tensors cross process boundaries — work items carry numpy
+        state-dicts and workers return plain dicts of numpy arrays.  Standard
+        pickle handles everything; torch's shared-memory mechanism (file_system
+        or file_descriptor) is never invoked, avoiding vm.max_map_count limits.
 
         We always use the 'spawn' multiprocessing context, even on Linux where
         'fork' is the default. Forking after CUDA has been initialised in the
@@ -510,26 +597,31 @@ class ParallelStrategistCollector:
         import random as _random
         from concurrent.futures import ProcessPoolExecutor
 
-        rng = _random.Random(self.seed)
+        # Advance base seed each call so every iteration sees different board
+        # seeds and opponent assignments.
+        base_seed = self.seed + self._call_count * self.n_episodes
+        self._call_count += 1
+        rng = _random.Random(base_seed)
 
         # Pre-build all episode work packages in the main process
         works = []
         for ep in range(self.n_episodes):
             learner_id = rng.choice(PLAYER_IDS)
-            works.append(self._make_work(ep, learner_id))
+            works.append(self._make_work(ep, learner_id, base_seed))
 
         # Run in parallel subprocesses — force spawn to avoid CUDA fork hazard
         mp_context = multiprocessing.get_context("spawn")
         buf = StrategistRolloutBuffer()
         with ProcessPoolExecutor(max_workers=self.n_workers, mp_context=mp_context) as pool:
-            for transitions in pool.map(_run_episode_fn, works):
-                for t in transitions:
-                    buf.add(t)
+            for raw_list in pool.map(_run_episode_fn, works):
+                for raw in raw_list:
+                    buf.add(_raw_to_transition(raw))
 
         buf.compute_returns()
         return buf
 
-    def _make_work(self, ep: int, learner_id: str) -> _EpisodeWork:
+    def _make_work(self, ep: int, learner_id: str, base_seed: int | None = None) -> _EpisodeWork:
+        seed = (base_seed if base_seed is not None else self.seed) + ep
         sampled = self.league.sample_opponents(learner_id, PLAYER_IDS)
         learner_spec = _agent_to_spec(self.agent, self.max_turns)
         opponent_specs = {
@@ -537,7 +629,7 @@ class ParallelStrategistCollector:
             for pid, ag in sampled.items()
         }
         return _EpisodeWork(
-            seed=self.seed + ep,
+            seed=seed,
             learner_id=learner_id,
             learner_spec=learner_spec,
             opponent_specs=opponent_specs,

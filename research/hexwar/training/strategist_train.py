@@ -73,7 +73,10 @@ BC_GAMES          = 200   # greedy games for behavioural cloning warm-start
 BC_EPOCHS         = 10    # BC training epochs
 PHASE_A_ITERS     = 50    # greedy bootstrap iterations
 PHASE_A_THRESHOLD = 0.25  # win rate triggers early Phase A exit
-TOTAL_ITERS       = 500   # Phase B + C total
+PHASE_B_ITERS     = 300   # league self-play (normal entropy)
+PHASE_C_ITERS     = 200   # competitive (reduced entropy — encourages decisiveness)
+TOTAL_ITERS       = PHASE_B_ITERS + PHASE_C_ITERS   # 500
+ENT_COEF_C        = 0.003  # reduced entropy coefficient for Phase C
 SNAPSHOT_EVERY    = 25    # iterations between league snapshots
 EVAL_EVERY        = 10    # iterations between evaluations
 EVAL_GAMES        = 12
@@ -124,7 +127,15 @@ class StrategistTrainer:
         total = {"loss": 0.0, "pg": 0.0, "vf": 0.0, "ent": 0.0}
         n = 0
 
-        self.agent.model.train()
+        # Do NOT switch to train() mode.  Dropout must be disabled here to keep
+        # evaluate_actions() consistent with collection-time (eval-mode) log probs.
+        # With dropout active, the same weights produce different logits each call,
+        # making ratio = exp(new_log_prob - old_log_prob) arbitrarily large.
+        # When adv < 0 and ratio >> 1, PPO clipping does NOT bound the loss:
+        #   min(ratio*adv, clip(ratio)*adv) selects the unclipped (more negative)
+        #   value, giving loss = -ratio*adv → catastrophic divergence.
+        # model.eval() only disables dropout/batchnorm — autograd and optimizer
+        # still work correctly in eval mode.
 
         for _ in range(self.n_epochs):
             import random
@@ -231,8 +242,14 @@ class StrategistTrainer:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _evaluate(agent: StrategistAgent, n_games: int = EVAL_GAMES, max_turns: int = 100) -> float:
-    """Quick win-rate check against GreedyAgent."""
+def _evaluate(agent: StrategistAgent, n_games: int = EVAL_GAMES, max_turns: int = MAX_TURNS) -> float:
+    """Quick win-rate check against GreedyAgent.
+
+    Uses MAX_TURNS (same as training) so that win-rate measurements are
+    comparable to what the agent experiences during training.  Using a shorter
+    max_turns (e.g. 100) would undercount wins and give misleading Phase A
+    exit signals since many games are still in progress at turn 100.
+    """
     from ..evaluation.eval_agent import evaluate_agent_vs_greedy
 
     agent.model.eval()
@@ -241,11 +258,20 @@ def _evaluate(agent: StrategistAgent, n_games: int = EVAL_GAMES, max_turns: int 
 
 
 def _make_greedy_pool(n: int = 3) -> list[GreedyAgent]:
-    """Return a small set of GreedyAgent opponents with different weight profiles."""
+    """Return a small set of GreedyAgent opponents with varied weight profiles.
+
+    The first agent uses default weights; subsequent agents randomly perturb
+    each weight by ±20% so the pool is genuinely diverse rather than n copies
+    of the same opponent.
+    """
+    import random as _rnd
+
     from ..agents.greedy_agent import DEFAULT_WEIGHTS as GW
-    agents = []
-    for _ in range(n):
-        agents.append(GreedyAgent(weights=list(GW)))
+    agents = [GreedyAgent(weights=list(GW))]
+    rng = _rnd.Random(0)
+    for _ in range(n - 1):
+        perturbed = [w * rng.uniform(0.8, 1.2) for w in GW]
+        agents.append(GreedyAgent(weights=perturbed))
     return agents
 
 
@@ -348,7 +374,7 @@ def train(
     # ------------------------------------------------------------------
     phase_a_done = skip_phase_a
     if not skip_phase_a:
-        print("\n=== Phase A: Bootstrap vs GreedyAgent ===")
+        print("\n=== Phase A: Bootstrap vs GreedyAgent ===", flush=True)
         greedy_only_league = League(learner=agent, seed=seed)
         for g in _make_greedy_pool(n=5):
             greedy_only_league.add_greedy(g)
@@ -370,6 +396,7 @@ def train(
         collector_a = CollectorCls(**collector_a_kwargs)
 
         for it in range(PHASE_A_ITERS):
+            print(f"[A] iter={it:03d}  collecting {n_episodes} episodes…", flush=True)
             t0 = time.time()
             buf = collector_a.collect()
             metrics = trainer.update(buf)
@@ -389,7 +416,8 @@ def train(
                 f"vf={metrics.get('vf_loss', 0):.4f}  "
                 f"ent={metrics.get('entropy', 0):.4f}  "
                 f"trans={len(buf):4d}  "
-                f"win%={win_str}  ({elapsed:.1f}s)"
+                f"win%={win_str}  ({elapsed:.1f}s)",
+                flush=True,
             )
             with open(log_path, "a") as f:
                 f.write(json.dumps(row) + "\n")
@@ -399,7 +427,7 @@ def train(
                 trainer.save_checkpoint(ckpt)
 
             if win_rate is not None and win_rate >= PHASE_A_THRESHOLD:
-                print(f"  → Phase A complete (win rate {win_rate:.2%} ≥ {PHASE_A_THRESHOLD:.2%})")
+                print(f"  → Phase A complete (win rate {win_rate:.2%} ≥ {PHASE_A_THRESHOLD:.2%})", flush=True)
                 phase_a_done = True
                 break
 
@@ -409,7 +437,7 @@ def train(
     # ------------------------------------------------------------------
     # Phase B + C: League self-play
     # ------------------------------------------------------------------
-    print("\n=== Phase B/C: League Self-Play ===")
+    print("\n=== Phase B/C: League Self-Play ===", flush=True)
     league.snapshot()  # seed pool with current (post-Phase-A) policy
 
     CollectorCls = ParallelStrategistCollector if n_workers > 1 else StrategistCollector
@@ -425,6 +453,15 @@ def train(
     collector = CollectorCls(**collector_kwargs)
 
     for it in range(total_iters):
+        # Phase C starts at PHASE_B_ITERS: switch to a lower entropy coefficient
+        # to encourage more decisive play once the policy is well-established.
+        in_phase_c = it >= PHASE_B_ITERS
+        if in_phase_c and trainer.ent_coef != ENT_COEF_C:
+            trainer.ent_coef = ENT_COEF_C
+            print(f"  → Phase C: entropy coef reduced to {ENT_COEF_C}", flush=True)
+        phase_label = "C" if in_phase_c else "B"
+
+        print(f"[{phase_label}] iter={it:04d}  collecting {n_episodes} episodes…", flush=True)
         t0 = time.time()
         buf = collector.collect()
         metrics = trainer.update(buf)
@@ -434,26 +471,27 @@ def train(
         evaluated = it % EVAL_EVERY == 0
         win_rate = _evaluate(agent) if evaluated else None
 
-        row = {"phase": "B", "iter": it, "elapsed": round(elapsed, 1),
+        row = {"phase": phase_label, "iter": it, "elapsed": round(elapsed, 1),
                "n_transitions": len(buf), **metrics,
                "win_rate": win_rate, **league.stats()}
         win_str = f"{win_rate*100:.1f}%" if win_rate is not None else "---"
         print(
-            f"[B] iter={it:04d}  "
+            f"[{phase_label}] iter={it:04d}  "
             f"loss={metrics.get('loss', 0):+.4f}  "
             f"pg={metrics.get('pg_loss', 0):+.4f}  "
             f"vf={metrics.get('vf_loss', 0):.4f}  "
             f"ent={metrics.get('entropy', 0):.4f}  "
             f"trans={len(buf):4d}  "
-            f"win%={win_str}  snaps={league.stats()['n_snapshots']}  ({elapsed:.1f}s)"
+            f"win%={win_str}  snaps={league.stats()['n_snapshots']}  ({elapsed:.1f}s)",
+            flush=True,
         )
         with open(log_path, "a") as f:
             f.write(json.dumps(row) + "\n")
 
         if it % SNAPSHOT_EVERY == 0:
-            ckpt = run_path / f"ckpt_B_{it:04d}.pt"
+            ckpt = run_path / f"ckpt_{phase_label}_{it:04d}.pt"
             trainer.save_checkpoint(ckpt)
-            print(f"  → Checkpoint saved: {ckpt}")
+            print(f"  → Checkpoint saved: {ckpt}", flush=True)
 
     # Final save
     final_ckpt = run_path / "ckpt_final.pt"
