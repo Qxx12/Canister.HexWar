@@ -59,6 +59,7 @@ export default function App() {
     clearQueue()
     setDisplayBoard(null)
     setSnapshotBoard(null)
+    setIsAnimating(false)
     setScreen('start')
   }, [resetGame, clearQueue])
 
@@ -112,8 +113,12 @@ export default function App() {
 
   const handleRetire = useCallback(() => {
     retire()
+    clearQueue()
+    setDisplayBoard(null)
+    setSnapshotBoard(null)
+    setIsAnimating(false)
     setScreen('end')
-  }, [retire])
+  }, [retire, clearQueue])
 
   // Process AI turns sequentially — wait for animation to finish before advancing
   useEffect(() => {

@@ -62,10 +62,11 @@ MAX_TURNS         = 300
 LR                = 3e-4
 CLIP_EPS          = 0.2
 VF_COEF           = 0.5
-ENT_COEF          = 0.01
+ENT_COEF          = 0.0
 MAX_GRAD_NORM     = 0.5
 N_EPOCHS          = 4
 BATCH_SIZE        = 64
+TARGET_KL         = 0.05   # approx KL threshold for early epoch stopping
 
 N_EPISODES        = 16    # games per collect() call
 
@@ -76,7 +77,7 @@ PHASE_A_THRESHOLD = 0.25  # win rate triggers early Phase A exit
 PHASE_B_ITERS     = 300   # league self-play (normal entropy)
 PHASE_C_ITERS     = 200   # competitive (reduced entropy — encourages decisiveness)
 TOTAL_ITERS       = PHASE_B_ITERS + PHASE_C_ITERS   # 500
-ENT_COEF_C        = 0.003  # reduced entropy coefficient for Phase C
+ENT_COEF_C        = 0.0    # Phase C: no entropy regularization (same as B)
 SNAPSHOT_EVERY    = 25    # iterations between league snapshots
 EVAL_EVERY        = 10    # iterations between evaluations
 EVAL_GAMES        = 12
@@ -104,6 +105,7 @@ class StrategistTrainer:
         max_grad_norm: float = MAX_GRAD_NORM,
         n_epochs: int = N_EPOCHS,
         batch_size: int = BATCH_SIZE,
+        target_kl: float = TARGET_KL,
         device: str | torch.device = "cpu",
     ) -> None:
         self.agent = agent
@@ -113,6 +115,7 @@ class StrategistTrainer:
         self.max_grad_norm = max_grad_norm
         self.n_epochs = n_epochs
         self.batch_size = batch_size
+        self.target_kl = target_kl
         self.device = torch.device(device)
         self.agent.model = self.agent.model.to(self.device)
         self.optimizer = Adam(agent.model.parameters(), lr=lr)
@@ -143,15 +146,28 @@ class StrategistTrainer:
         # model.eval() only disables dropout/batchnorm — autograd and optimizer
         # still work correctly in eval mode.
 
-        for _ in range(self.n_epochs):
+        for epoch in range(self.n_epochs):
             import random
             random.shuffle(all_trans)
+            epoch_kl = 0.0
+            epoch_batches = 0
             for start in range(0, len(all_trans), self.batch_size):
                 batch = all_trans[start : start + self.batch_size]
                 m = self._update_batch(batch)
                 for k in total:
                     total[k] += m.get(k, 0.0)
                 n += 1
+                epoch_kl += m.get("approx_kl", 0.0)
+                epoch_batches += 1
+
+            # KL early stopping: if the mean approximate KL divergence across
+            # all batches in this epoch exceeds target_kl, the policy has drifted
+            # far enough from the collection-time policy — stop re-using these
+            # transitions.  This prevents the feedback loop where concentrated
+            # Beta distributions create large log_ratios → huge gradients →
+            # even more concentrated distributions → runaway loss explosion.
+            if epoch_batches > 0 and epoch_kl / epoch_batches > self.target_kl:
+                break
 
         self.agent.model.eval()
         self._step += 1
@@ -178,7 +194,7 @@ class StrategistTrainer:
         # loss.backward() → NaN in every parameter → model permanently corrupted.
         norm_adv = (raw_adv - raw_adv.mean()) / (raw_adv.std(correction=0) + 1e-8)
 
-        pg_losses, vf_losses, entropies = [], [], []
+        pg_losses, vf_losses, entropies, log_ratios = [], [], [], []
 
         for i, tr in enumerate(batch):
             if tr.chosen_edges.numel() == 0:
@@ -211,23 +227,30 @@ class StrategistTrainer:
             # produced ratios like 1.2^10 ≈ 6x for a 10-order turn, which PPO
             # clipping cannot contain and leads to catastrophic loss spikes.
             #
-            # Clamp log-ratio to [-20, 20] before exp.  exp(20) ≈ 5e8 — large
-            # enough to represent any real policy shift; small enough that
-            # adv * ratio stays within float32 range (max ~3.4e38).  Without
-            # this clamp a stale old_lp can produce ratio ≈ exp(50) = 5e21,
-            # and multiplying by adv overflows to Inf, making clip_grad_norm_
-            # compute clip_coef = max_norm / Inf = 0, then Inf * 0 = NaN in
-            # IEEE 754, permanently corrupting model weights.
-            log_ratio = torch.clamp(log_prob - old_lp, -20.0, 20.0)
+            # Clamp log-ratio to [-1, 1] before exp.  exp(1) ≈ 2.7x max ratio.
+            # Tighter than [-3, 3] because when adv < 0 and ratio > 1+ε,
+            # PPO clipping does NOT bound the loss:
+            #   min(ratio*adv, clip(ratio)*adv) selects ratio*adv (unclipped).
+            # With exp(3)≈20x and moderate advantages, pg_loss of 2-5 builds up
+            # slowly over 200 iters, causing policy drift and win-rate collapse.
+            # exp(1)≈2.7x limits each order's contribution and keeps pg stable.
+            log_ratio = torch.clamp(log_prob - old_lp, -1.0, 1.0)
             ratio = torch.exp(log_ratio)                   # [N_orders]
             pg1 = ratio * adv
             pg2 = torch.clamp(ratio, 1 - self.clip_eps, 1 + self.clip_eps) * adv
             pg_losses.append(-torch.min(pg1, pg2).mean())  # mean across orders
             vf_losses.append(F.mse_loss(value.squeeze(), ret))
             entropies.append(entropy)
+            log_ratios.append(log_ratio.detach())
 
         if not pg_losses:
             return {}
+
+        # Approx KL = E[ratio - 1 - log_ratio] (always ≥ 0, = 0 when ratio = 1).
+        # Returned so the epoch loop can stop early if the policy has drifted too
+        # far from the collection-time policy (target_kl guard in update()).
+        all_lr = torch.cat(log_ratios)
+        approx_kl = (torch.exp(all_lr) - 1 - all_lr).mean().item()
 
         pg = torch.stack(pg_losses).mean()
         vf = torch.stack(vf_losses).mean()
@@ -260,7 +283,8 @@ class StrategistTrainer:
         torch.nn.utils.clip_grad_norm_(self.agent.model.parameters(), self.max_grad_norm)
         self.optimizer.step()
 
-        return {"loss": loss.item(), "pg": pg.item(), "vf": vf.item(), "ent": ent.item()}
+        return {"loss": loss.item(), "pg": pg.item(), "vf": vf.item(), "ent": ent.item(),
+                "approx_kl": approx_kl}
 
     def save_checkpoint(self, path: str | Path) -> None:
         torch.save({
